@@ -5,15 +5,15 @@ email: "justin.elszasz@baltimorecity.gov"
 date: "Tuesday, July 9, 2019"
 output:
   html_notebook:
-    #code_folding: hide
+    code_folding: hide
     fig_height: 5
     fig_width: 10
     toc: yes
     toc_depth: 2
 ---
 
-```{r setup, include = FALSE, echo = FALSE, message = FALSE, cache = TRUE}
-knitr::opts_chunk$set(echo = FALSE, 
+```{r setup, include = T, echo = T, message = FALSE, cache = TRUE}
+knitr::opts_chunk$set(echo = T, 
                       warning = F, 
                       message = F, 
                       include = T,
@@ -47,11 +47,11 @@ source("../src/functions.R")
 ```
 
 ```{r load_data}
-microzones <- readOGR("../data/Micro_Zones", "Zones")
+microzones <- readOGR("../data/raw/Micro_Zones", "Zones")
 #street.guncounts <- readOGR("../data/Streets_GunCounts", "Streets_GunCounts")
-vri <- readOGR("../data/VRI_Zones_2019", "VRI_Zones_Jan2019")
-posts <- readOGR("../data/Police_Post_Shapefile", "Posts_As_of_1_22_2019")
-districts <- readOGR("../data/Districts", "Police_Districts")
+vri <- readOGR("../data/raw/VRI_Zones_2019", "VRI_Zones_Jan2019")
+posts <- readOGR("../data/raw/Police_Post_Shapefile", "Posts_As_of_1_22_2019")
+districts <- readOGR("../data/raw/Districts", "Police_Districts")
 
 query <- paste0("https://data.baltimorecity.gov/resource/wsfq-mvij.json?$where=",
                 "(Description like 'HOMICIDE' OR ",
@@ -208,7 +208,10 @@ rolling_counts <- counts %>%
 # Citywide
 
 
-```{r}
+```{r fig.width = 6, fig.height = 4}
+
+folder <- paste0("../output/plots/", last_date, "/")
+
 for(desc in unique(rolling_counts$description)){
   
   fn_roll90 <- paste0(folder, last_date, "_rolling_90_day_citywide_", desc, ".pdf")
@@ -233,7 +236,6 @@ for(desc in unique(rolling_counts$description)){
 
 ```{r fig.width=10, fig.height=10}
 
-folder <- paste0("../output/plots/", last_date, "/")
   
 if (!dir.exists(folder)){
   dir.create(folder)
