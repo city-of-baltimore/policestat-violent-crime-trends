@@ -1,0 +1,265 @@
+---
+title: "PoliceStat Biweekly Reporting"
+author: "Justin Elszasz"
+email: "justin.elszasz@baltimorecity.gov"
+date: "Tuesday, July 9, 2019"
+output:
+  html_notebook:
+    #code_folding: hide
+    fig_height: 5
+    fig_width: 10
+    toc: yes
+    toc_depth: 2
+---
+
+```{r setup, include = FALSE, echo = FALSE, message = FALSE, cache = TRUE}
+knitr::opts_chunk$set(echo = FALSE, 
+                      warning = F, 
+                      message = F, 
+                      include = T,
+                      fig.width = 10,
+                      fig.height = 5)
+```
+
+```{r libraries}
+library(tidyverse)
+library(RSocrata)
+library(RcppRoll)
+library(ggiteam)
+library(staplr)
+library(scales)
+library(lubridate)
+library(rgdal)
+
+#library(tidyverse)
+#library(RSocrata)
+#library(sp)
+library(leaflet)
+library(RODBC)
+library(htmltools)
+#library(rgdal)
+#library(geojsonsf)
+library(lubridate)
+#library(leaflet.extras)
+library(mapview)
+
+source("../src/functions.R")
+```
+
+```{r load_data}
+microzones <- readOGR("../data/Micro_Zones", "Zones")
+#street.guncounts <- readOGR("../data/Streets_GunCounts", "Streets_GunCounts")
+vri <- readOGR("../data/VRI_Zones_2019", "VRI_Zones_Jan2019")
+posts <- readOGR("../data/Police_Post_Shapefile", "Posts_As_of_1_22_2019")
+districts <- readOGR("../data/Districts", "Police_Districts")
+
+query <- paste0("https://data.baltimorecity.gov/resource/wsfq-mvij.json?$where=",
+                "(Description like 'HOMICIDE' OR ",
+                "Description like 'SHOOTING' OR ", 
+                "Description like 'AGG. ASSAULT' OR ",
+                "contains(Description, 'ROBBERY')) AND ",
+                "date_extract_y(crimedate) in(2018, 2019)")
+
+df <- read.socrata(query)
+```
+
+
+```{r geo_transform}
+microzones <- spTransform(microzones, CRS("+init=epsg:4326"))
+vri <- spTransform(vri, CRS("+init=epsg:4326"))
+posts <- spTransform(posts, CRS("+init=epsg:4326"))
+```
+
+```{r}
+df <- df %>% 
+  filter(!is.na(latitude)) %>%
+  mutate(crimedate = as.Date(crimedate),
+         longitude = as.numeric(longitude),
+         latitude = as.numeric(latitude),
+         description = ifelse(grepl("ROBBERY", description), 
+                              "ROBBERY", description))
+
+last_date <- max(df$crimedate)
+```
+
+
+```{r}
+# convert crime df to geospatial
+df_geo <- SpatialPointsDataFrame(
+  coords = df %>% select(longitude, latitude), 
+  df, 
+  proj4string = CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
+)
+
+# transform to right coords system
+df_geo <- spTransform(
+  df_geo, 
+  CRSobj = CRS("+init=epsg:4326 +proj=longlat +datum=WGS84 +no_defs +ellps=WGS84
++towgs84=0,0,0")
+)
+
+# tag each crime with the post
+df_tagged_post <- over(df_geo, posts) 
+df_tagged_microzones <- over(df_geo, microzones) 
+
+# join the tag info back to the crime geospatial df
+df_geo@data <- bind_cols(df_geo@data, df_tagged_post) %>%
+  rename("post_correct" = Area) %>%
+  bind_cols(df_tagged_microzones)
+
+
+```
+
+```{r}
+# get counts of shootings by post since 2018
+post_shootings_2018_to_present <- df_geo@data %>% 
+  filter(year(crimedate) >= 2018, 
+         description == "SHOOTING") %>% 
+  count(post_correct) %>%
+  rename("shootings_since_2018" = n)
+
+# join the counts to the post shapefile
+posts@data <- posts@data %>% 
+  left_join(
+    post_shootings_2018_to_present,
+    by = c("Area" = "post_correct")
+  )
+
+microzone_shootings_2018_to_present <- df_geo@data %>%
+  filter(year(crimedate) >= 2018,
+         description == "SHOOTING") %>%
+  count(HS_Zone) %>%
+  rename("shootings_since_2018" = n)
+
+microzones@data <- microzones@data %>%
+  left_join(
+    microzone_shootings_2018_to_present,
+    by = c("HS_Zone" = "HS_Zone")
+  )
+```
+
+```{r rolling_counts}
+
+# By district
+counts_districts <- df_geo@data %>%
+  count(description, district, crimedate) %>%
+  group_by(description, district) %>%
+  complete(crimedate = seq.Date(as.Date(min(df_geo@data$crimedate)), 
+                                as.Date(max(df_geo@data$crimedate)),
+                                by="day")) %>%
+  replace_na(list(n = 0)) %>%
+  ungroup()
+
+hom_shot_combo_district_counts <- counts_districts %>% 
+  filter(description %in% c("SHOOTING", "HOMICIDE")) %>% 
+  group_by(district, crimedate) %>% 
+  select(description, district, crimedate, n) %>% 
+  spread(key = description, value = n) %>% 
+  mutate(n = HOMICIDE + SHOOTING, 
+         description = "HOMICIDE + SHOOTING") %>% 
+  select(-HOMICIDE, -SHOOTING) %>% 
+  ungroup()
+
+rolling_counts_districts <- counts_districts %>%
+  bind_rows(hom_shot_combo_district_counts) %>%
+  arrange(crimedate) %>%
+  group_by(district, description) %>%
+  mutate(roll_28 = roll_sum(x = n, n = 28, align = "right", fill = NA),
+         roll_7 = roll_sum(x = n, n = 7, align = "right", fill = NA),
+         roll_90 = roll_sum(x = n, n = 90, align = "right", fill = NA)) %>%
+  ungroup() %>%
+  arrange(description, district, crimedate)
+
+# Citywide
+
+counts <- df_geo@data %>%
+  count(description, crimedate) %>%
+  group_by(description) %>%
+  complete(crimedate = seq.Date(as.Date(min(df_geo@data$crimedate)), 
+                                as.Date(max(df_geo@data$crimedate)),
+                                by="day")) %>%
+  replace_na(list(n = 0)) %>%
+  mutate(district = "CITYWIDE")
+
+
+hom_shot_combo_counts <- counts %>% 
+  filter(description %in% c("SHOOTING", "HOMICIDE")) %>% 
+  group_by(crimedate) %>% 
+  select(description, crimedate, n) %>% 
+  spread(key = description, value = n) %>% 
+  mutate(n = HOMICIDE + SHOOTING, 
+         description = "HOMICIDE + SHOOTING",
+         district = "CITYWIDE") %>% 
+  select(-HOMICIDE, -SHOOTING) %>% 
+  ungroup()
+
+rolling_counts <- counts %>%
+  bind_rows(hom_shot_combo_counts) %>%
+  arrange(crimedate) %>%
+  group_by(description) %>%
+  mutate(roll_28 = roll_sum(x = n, n = 28, align = "right", fill = NA),
+         roll_7 = roll_sum(x = n, n = 7, align = "right", fill = NA),
+         roll_90 = roll_sum(x = n, n = 90, align = "right", fill = NA)) %>%
+  ungroup() %>%
+  arrange(description, crimedate)
+
+```
+
+# Citywide
+
+
+```{r}
+for(desc in unique(rolling_counts$description)){
+  
+  fn_roll90 <- paste0(folder, last_date, "_rolling_90_day_citywide_", desc, ".pdf")
+  fn_roll28 <- paste0(folder, last_date, "_rolling_28_day_citywide_", desc, ".pdf")
+  
+  plt_roll28 <- roll28_district_facet_plot(rolling_counts, desc)
+  plt_roll90 <- roll90_district_facet_plot(rolling_counts, desc)
+  
+  ggsave(filename = fn_roll28, plt_roll28, device = "pdf", 
+         width = 7, height = 9, units = "in")
+  
+  ggsave(filename = fn_roll90, plt_roll90, device = "pdf", 
+         width = 7, height = 9, units = "in")
+  
+  
+  print(plt_roll28)
+  print(plt_roll90)
+}
+```
+
+# By District
+
+```{r fig.width=10, fig.height=10}
+
+folder <- paste0("../output/plots/", last_date, "/")
+  
+if (!dir.exists(folder)){
+  dir.create(folder)
+}
+
+for(desc in unique(rolling_counts_districts$description)){
+  
+  fn_roll90 <- paste0(folder, last_date, "_rolling_90_day_by_district_", desc, ".pdf")
+  fn_roll28 <- paste0(folder, last_date, "_rolling_28_day_by_district_", desc, ".pdf")
+  
+  plt_roll28 <- roll28_district_facet_plot(rolling_counts_districts, desc)
+  plt_roll90 <- roll90_district_facet_plot(rolling_counts_districts, desc)
+  
+  ggsave(filename = fn_roll28, plt_roll28, device = "pdf", 
+         width = 7, height = 9, units = "in")
+  
+  ggsave(filename = fn_roll90, plt_roll90, device = "pdf", 
+         width = 7, height = 9, units = "in")
+  
+  
+  print(plt_roll28)
+  print(plt_roll90)
+}
+
+#output.pdf <- paste0(folder, last_date, "_rolling_28_day_by_district.pdf")
+#staple_pdf(input_directory = folder, output_filepath = "output.pdf") not working
+```
+
+
