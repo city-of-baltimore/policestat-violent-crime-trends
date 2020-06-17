@@ -1,0 +1,170 @@
+---
+title: "PoliceStat Biweekly Reporting"
+author: "Justin Elszasz"
+email: "justin.elszasz@baltimorecity.gov"
+date: "Tuesday, July 9, 2019"
+output:
+  html_notebook:
+    code_folding: hide
+    fig_height: 5
+    fig_width: 10
+    toc: yes
+    toc_depth: 2
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup, include = T, echo = T, message = FALSE, cache = TRUE}
+knitr::opts_chunk$set(echo = T, 
+                      warning = F, 
+                      message = F, 
+                      include = T,
+                      fig.width = 10,
+                      fig.height = 5)
+```
+
+```{r libraries}
+library(tidyverse)
+library(RSocrata)
+library(RcppRoll)
+#library(ggiteam)
+#library(staplr)
+library(scales)
+library(lubridate)
+library(rgdal)
+
+#library(tidyverse)
+#library(RSocrata)
+#library(sp)
+library(leaflet)
+library(RODBC)
+library(htmltools)
+#library(rgdal)
+#library(geojsonsf)
+library(lubridate)
+#library(leaflet.extras)
+#library(mapview)
+library(suncalc) # for sunrise and sunset times
+#source("../src/functions.R")
+```
+
+```{r load_data}
+query <- paste0("https://data.baltimorecity.gov/resource/wsfq-mvij.json?$where=",
+                "(Description like 'HOMICIDE' OR ",
+                "Description like 'SHOOTING' OR ", 
+                "Description like 'AGG. ASSAULT' OR ",
+                "contains(Description, 'ROBBERY')) AND ",
+                "date_extract_y(crimedate) in(2017, 2018, 2019)")
+
+df <- read.socrata(query)
+```
+
+
+```{r}
+df <- df %>% 
+  filter(!is.na(latitude)) %>%
+  mutate(crimedate = as.Date(crimedate),
+         longitude = as.numeric(longitude),
+         latitude = as.numeric(latitude),
+         description = ifelse(grepl("ROBBERY", description), 
+                              "ROBBERY", description))
+
+last_date <- max(df$crimedate)
+```
+
+
+```{r fig.height = 2, fig.width = 4}
+df %>%
+  mutate(crimetime = hms::as_hms(crimetime),
+         crime_hour = hour(crimetime),
+         crime_day = wday(crimedate)) %>%
+  count(description, crime_day, crime_hour) %>%
+  group_by(description) %>%
+  mutate(pct = n / sum(n)) %>%
+  ggplot(aes(crime_day, crime_hour, fill = pct)) +
+  facet_grid(cols = vars(description)) +
+  geom_tile(color = "white", ) +
+  geom_text(aes(crime_day, crime_hour, label = n), size = 2) +
+  scale_fill_continuous(type = "viridis", 
+                        labels = percent,
+                        name = "% of Daily Events") +
+  theme_iteam_google_docs() +
+  scale_x_continuous(breaks = seq(1,7,1)) +
+  ggtitle(paste0("Records since ", min(df$crimedate))) +
+  labs(title = "",
+       y = "Hour of Day",
+       x = "Day of Week (1 = Sunday)",
+       caption = paste0("Open Baltimore, Data from ", min(df$crimedate),
+                        " to ", max(df$crimedate)))
+```
+```{r fig.width = 3, fig.height = 1.5}
+df %>%
+  filter(description %in% c("HOMICIDE", "SHOOTING")) %>%
+  mutate(crimetime = hms::as_hms(crimetime),
+         crime_hour = hour(crimetime),
+         crime_day = wday(crimedate)) %>%
+  count(crime_day, crime_hour) %>%
+  mutate(pct = n / sum(n)) %>%
+  ggplot(aes(crime_hour, crime_day, fill = pct)) +
+  geom_tile(color = "white", ) +
+  geom_text(aes(crime_hour, crime_day, label = n), size = 3) +
+  scale_fill_continuous(type = "viridis",
+                        labels = percent,
+                        name = "% of Daily Events") +
+  scale_y_reverse(breaks = seq(1,7,1)) +
+  scale_x_continuous(breaks = seq(0,23,1)) +
+  theme_iteam_google_docs() +
+  ggtitle(paste0("HOMICIDES + SHOOTINGS\nsince ", min(df$crimedate))) +
+    labs(
+       x = "Hour of Day",
+       y = "Day of Week (1 = Sunday)",
+       caption = paste0("Open Baltimore\nData from ", min(df$crimedate),
+                        " to ", max(df$crimedate))) 
+```
+
+```{r fig.width = 6, fig.height = 10}
+df %>%
+  filter(description %in% c("HOMICIDE", "SHOOTING")) %>%
+  mutate(crimetime = hms::as_hms(crimetime),
+         crime_hour = hour(crimetime),
+         crime_day = wday(crimedate),
+         crime_month = month(crimedate)) %>%
+  count(crime_month, crime_day, crime_hour) %>%
+  mutate(pct = n / sum(n)) %>%
+  ggplot(aes(crime_day, crime_hour, fill = pct)) +
+  facet_wrap(~crime_month) +
+  geom_tile(color = "white", ) +
+  geom_text(aes(crime_day, crime_hour, label = n)) +
+  scale_fill_continuous(type = "viridis") +
+  theme_iteam_presentations() +
+  ggtitle(paste0("HOMICIDES + SHOOTINGS\nsince ", min(df$crimedate)))
+  
+```
+
+
+```{r}
+df %>% 
+  filter(crimedate >= "2019-01-01") %>%
+  mutate(
+    sunrise = getSunlightTimes(
+      date = as.Date(crimedate), 
+      lat = 39.2904, 
+      lon = -76.6122, 
+      tz = "America/New_York")$sunrise,
+    sunset = getSunlightTimes(
+      date = as.Date(crimedate), 
+      lat = 39.2904, 
+      lon = -76.6122, 
+      tz = "America/New_York")$sunset,
+    crime_datetime = as.POSIXct(ymd(crimedate) + hms(crimetime),
+                                tz = "America/New_York"),
+    
+    daylight = interval(sunrise, sunset),
+    during_daylight = ifelse(crime_datetime %within% daylight, T, F)) %>%
+  count(description, during_daylight) %>%
+  group_by(description) %>%
+  mutate(pct_in_daylight = n / sum(n)) %>%
+  filter(during_daylight == T) %>%
+  select(-during_daylight)
+```
+

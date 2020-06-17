@@ -4,12 +4,13 @@ author: "Justin Elszasz"
 email: "justin.elszasz@baltimorecity.gov"
 date: "Tuesday, July 9, 2019"
 output:
-  html_notebook:
+  html_notebook: 
     code_folding: hide
-    fig_height: 5
-    fig_width: 10
+    fig_height: 4
     toc: yes
     toc_depth: 2
+editor_options: 
+  chunk_output_type: inline
 ---
 
 ```{r setup, include = T, echo = T, message = FALSE, cache = TRUE}
@@ -26,60 +27,66 @@ library(tidyverse)
 library(RSocrata)
 library(RcppRoll)
 library(ggiteam)
-library(staplr)
+#library(staplr)
 library(scales)
 library(lubridate)
 library(rgdal)
 
-#library(tidyverse)
-#library(RSocrata)
-#library(sp)
+
 library(leaflet)
 library(RODBC)
 library(htmltools)
-#library(rgdal)
-#library(geojsonsf)
-library(lubridate)
+library(readxl)
 #library(leaflet.extras)
-library(mapview)
+#library(mapview)
 
 source("../src/functions.R")
 ```
 
 ```{r load_data}
-microzones <- readOGR("../data/raw/Micro_Zones", "Zones")
-#street.guncounts <- readOGR("../data/Streets_GunCounts", "Streets_GunCounts")
-vri <- readOGR("../data/raw/VRI_Zones_2019", "VRI_Zones_Jan2019")
-posts <- readOGR("../data/raw/Police_Post_Shapefile", "Posts_As_of_1_22_2019")
-districts <- readOGR("../data/raw/Districts", "Police_Districts")
+posts <- readOGR("../data/raw/Police_Post_Shapefile", "Posts_As_of_1_22_2019",
+                 verbose = T)
+districts <- readOGR("../data/raw/Districts", "Police_Districts",
+                     verbose = T)
+
+
+  
 
 query <- paste0("https://data.baltimorecity.gov/resource/wsfq-mvij.json?$where=",
                 "(Description like 'HOMICIDE' OR ",
                 "Description like 'SHOOTING' OR ", 
+                "Description like 'RAPE' OR ", 
                 "Description like 'AGG. ASSAULT' OR ",
-                "contains(Description, 'ROBBERY')) AND ",
-                "date_extract_y(crimedate) in(2018, 2019)")
+                "contains(Description, 'ROBBERY'))")
 
 df <- read.socrata(query)
 ```
 
 
 ```{r geo_transform}
-microzones <- spTransform(microzones, CRS("+init=epsg:4326"))
-vri <- spTransform(vri, CRS("+init=epsg:4326"))
 posts <- spTransform(posts, CRS("+init=epsg:4326"))
 ```
 
 ```{r}
 df <- df %>% 
-  filter(!is.na(latitude)) %>%
+  filter(!is.na(latitude),
+         year(crimedate) >= 2017) %>%
   mutate(crimedate = as.Date(crimedate),
          longitude = as.numeric(longitude),
          latitude = as.numeric(latitude),
          description = ifelse(grepl("ROBBERY", description), 
-                              "ROBBERY", description))
+                              "ROBBERY", description),
+         description_grouped = 
+           case_when(
+             grepl("ROBBERY", description) & grepl("FIREARM", weapon) ~ "ARMED ROBBERY",
+             grepl("ROBBERY", description) & !grepl("FIREARM", weapon) ~ "UNARMED ROBBERY",
+             description %in% c("HOMICIDE", "SHOOTING") ~ "HOMICIDE/SHOOTING",
+             TRUE ~ description)
+  )
 
 last_date <- max(df$crimedate)
+
+
 ```
 
 
@@ -205,54 +212,77 @@ rolling_counts <- counts %>%
 
 ```
 
+
+
 # Citywide
 
 
 ```{r fig.width = 6, fig.height = 4}
 
-folder <- paste0("../output/plots/", last_date, "/")
+# folder <- paste0("../output/plots/", last_date, "/")
+folder <- paste0("../../../../../Google Drive/Office of Performance & Innovation/CitiStat/PoliceStat/Regular Reporting/", last_date, "/")
+ 
+if (!dir.exists(folder)){
+  dir.create(folder)
+}
+
 
 for(desc in unique(rolling_counts$description)){
   
-  fn_roll90 <- paste0(folder, last_date, "_rolling_90_day_citywide_", desc, ".pdf")
-  fn_roll28 <- paste0(folder, last_date, "_rolling_28_day_citywide_", desc, ".pdf")
+  fn_roll90 <- paste0(folder, last_date, "_rolling_90_day_citywide_", desc, ".png")
+  fn_roll28 <- paste0(folder, last_date, "_rolling_28_day_citywide_", desc, ".png")
   
   plt_roll28 <- roll28_district_facet_plot(rolling_counts, desc)
   plt_roll90 <- roll90_district_facet_plot(rolling_counts, desc)
   
-  ggsave(filename = fn_roll28, plt_roll28, device = "pdf", 
-         width = 7, height = 9, units = "in")
+  ggsave(filename = fn_roll28, plt_roll28, device = "png", 
+         width = 5, height = 3, units = "in")
   
-  ggsave(filename = fn_roll90, plt_roll90, device = "pdf", 
-         width = 7, height = 9, units = "in")
+  ggsave(filename = fn_roll90, plt_roll90, device = "png", 
+         width = 5, height = 3, units = "in")
   
   
   print(plt_roll28)
   print(plt_roll90)
 }
+```
+
+```{r fig.height = 2, fig.width = 4, warning=F, message=F}
+roll90_district_facet_plot(rolling_counts, "HOMICIDE + SHOOTING") +
+  geom_text(aes(x = as.Date("2019-07-01") - 14 , y = 250, label = "July 1"),
+            color = "red", family = "oswald", hjust = 1) +
+  theme_iteam_presentations()
+```
+```{r fig.height = .75, fig.width = 2, warning=F, message=F}
+roll90_district_facet_plot_sparkline(rolling_counts, "HOMICIDE + SHOOTING") +
+  # geom_text(aes(x = as.Date("2019-07-01") - 14 , y = 250, label = "July 1"),
+  #           color = "red", family = "oswald", hjust = 1) +
+  #theme_iteam_presentations() +
+  theme(panel.grid.major.x = element_line(size=.5, color="gray90" ),
+        panel.grid.major.y = element_blank(),
+        title = element_blank(),
+        axis.title.y = element_blank())
+        
 ```
 
 # By District
 
 ```{r fig.width=10, fig.height=10}
 
-  
-if (!dir.exists(folder)){
-  dir.create(folder)
-}
+
 
 for(desc in unique(rolling_counts_districts$description)){
   
-  fn_roll90 <- paste0(folder, last_date, "_rolling_90_day_by_district_", desc, ".pdf")
-  fn_roll28 <- paste0(folder, last_date, "_rolling_28_day_by_district_", desc, ".pdf")
+  fn_roll90 <- paste0(folder, last_date, "_rolling_90_day_by_district_", desc, ".png")
+  fn_roll28 <- paste0(folder, last_date, "_rolling_28_day_by_district_", desc, ".png")
   
   plt_roll28 <- roll28_district_facet_plot(rolling_counts_districts, desc)
   plt_roll90 <- roll90_district_facet_plot(rolling_counts_districts, desc)
   
-  ggsave(filename = fn_roll28, plt_roll28, device = "pdf", 
+  ggsave(filename = fn_roll28, plt_roll28, device = "png", 
          width = 7, height = 9, units = "in")
   
-  ggsave(filename = fn_roll90, plt_roll90, device = "pdf", 
+  ggsave(filename = fn_roll90, plt_roll90, device = "png", 
          width = 7, height = 9, units = "in")
   
   
@@ -260,8 +290,294 @@ for(desc in unique(rolling_counts_districts$description)){
   print(plt_roll90)
 }
 
-#output.pdf <- paste0(folder, last_date, "_rolling_28_day_by_district.pdf")
-#staple_pdf(input_directory = folder, output_filepath = "output.pdf") not working
+#output.png <- paste0(folder, last_date, "_rolling_28_day_by_district.png")
+#staple_png(input_directory = folder, output_filepath = "output.png") not working
 ```
 
+```{r fig.width = 3, fig.height = 2}
+roll90_single_district_plot("HOMICIDE + SHOOTING", ) +
+  geom_vline(aes(xintercept = as.Date("2019-07-01")), color = "red", size = .5, linetype = "dotted") +
+  theme_iteam_presentations()
+
+```
+
+```{r fig.width = 3, fig.height=1.5}
+hom_shot_cumsums <- df_geo@data %>%
+  filter(description %in% c("HOMICIDE", "SHOOTING")) %>%
+  count(crimedate) %>%
+  complete(crimedate = seq.Date(as.Date(min(df_geo@data$crimedate)), 
+                                as.Date(max(df_geo@data$crimedate)),
+                                by="day")) %>%
+  replace_na(list(n = 0)) %>%
+  arrange(crimedate) %>%
+  mutate(day_of_year = as.numeric(strftime(crimedate, "%j")),
+         crime.year = year(crimedate)) %>%
+  group_by(crime.year) %>%
+  mutate(hs_cumsum = cumsum(n))
+
+hom_shot_current <- hom_shot_cumsums %>%
+  filter(crime.year == 2019) %>%
+  summarise(max(hs_cumsum)) %>%
+  pull()
+
+current_day <- hom_shot_cumsums %>%
+  filter(!is.na(hs_cumsum),
+         crime.year == 2019) %>%
+  ungroup() %>%
+  summarise(max(day_of_year)) %>%
+  pull()
+
+hom_shot_projections <- round(365 * hom_shot_current / current_day, 0)
+
+cum.plot <- hom_shot_cumsums %>%
+  ggplot(aes(day_of_year, hs_cumsum, 
+             group = crime.year, 
+             color = as.factor(crime.year))) +
+  geom_line() +
+  #scale_alpha_manual(values = as.factor(c(1, 1, 0.3, 1., 1))) +
+  theme_iteam_presentations() +
+  scale_color_discrete_iteam() +
+  theme(legend.title = element_blank()) +
+  ylab("Cumulative\nHom. + Shots.") +
+  xlab("Day of Year") 
+
+ggsave(filename = paste0(folder, last_date, "cumulative_hom_shoot.png"), cum.plot, device = "png", 
+       width = 4, height = 2, units = "in")
+
+cum.plot
+```
+
+```{r fig.width = 3, fig.height=1.5}
+hom_cumsums <- df_geo@data %>%
+  filter(description %in% c("HOMICIDE")) %>%
+  count(crimedate) %>%
+  complete(crimedate = seq.Date(as.Date(min(df_geo@data$crimedate)), 
+                                as.Date(max(df_geo@data$crimedate)),
+                                by="day")) %>%
+  replace_na(list(n = 0)) %>%
+  arrange(crimedate) %>%
+  mutate(day_of_year = as.numeric(strftime(crimedate, "%j")),
+         crime.year = year(crimedate)) %>%
+  group_by(crime.year) %>%
+  mutate(hom_cumsum = cumsum(n))
+
+hom_current <- hom_cumsums %>%
+  filter(crime.year == 2019) %>%
+  summarise(max(hom_cumsum)) %>%
+  pull()
+
+hom_projections <- round(365 * hom_current / current_day, 0)
+
+cum.plot <- hom_cumsums %>%
+  ggplot(aes(day_of_year, hom_cumsum, 
+             group = crime.year, 
+             color = as.factor(crime.year))) +
+  geom_line() +
+  geom_point(aes(x = hom_cumsums %>% 
+                   filter(crime.year == 2019) %>%
+                   summarise(max(day_of_year)) %>%
+                   pull(), 
+                 y = hom_cumsums %>% 
+                   filter(crime.year == 2019) %>%
+                   summarise(max(hom_cumsum)) %>%
+                   pull()),
+             color = iteam.colors[3]) +
+  geom_point(aes(x = 365, 
+                 y = hom_cumsums %>% 
+                   filter(crime.year == 2018) %>%
+                   summarise(max(hom_cumsum)) %>%
+                   pull()),
+             color = iteam.colors[2]) +
+  geom_point(aes(x = 365, 
+                 y = hom_cumsums %>% 
+                   filter(crime.year == 2017) %>%
+                   summarise(max(hom_cumsum)) %>%
+                   pull()),
+             color = iteam.colors[1]) +
+  geom_point(aes(x = 365, y = hom_projections), color = iteam.colors[3]) +
+  
+  geom_text(aes(x = hom_cumsums %>% 
+                  filter(crime.year == 2019) %>%
+                  summarise(max(day_of_year)) %>%
+                  pull(), 
+                y = hom_cumsums %>% 
+                  filter(crime.year == 2019) %>%
+                  summarise(max(hom_cumsum)) %>%
+                  pull() +10,
+                label = hom_cumsums %>% 
+                  filter(crime.year == 2019) %>%
+                  summarise(max(hom_cumsum)) %>%
+                  pull(),
+                hjust = 1),
+            color = iteam.colors[3]) +
+  geom_text(aes(x = 375, 
+                y = hom_cumsums %>% 
+                  filter(crime.year == 2018) %>%
+                  summarise(max(hom_cumsum)) %>%
+                  pull(),
+                label = hom_cumsums %>% 
+                  filter(crime.year == 2018) %>%
+                  summarise(max(hom_cumsum)) %>%
+                  pull(),
+                hjust = 0),
+            color = iteam.colors[2]) +
+  geom_text(aes(x = 375, 
+                y = hom_cumsums %>% 
+                  filter(crime.year == 2017) %>%
+                  summarise(max(hom_cumsum)) %>%
+                  pull() - 10,
+                label = hom_cumsums %>% 
+                  filter(crime.year == 2017) %>%
+                  summarise(max(hom_cumsum)) %>%
+                  pull(),
+                hjust = 0),
+            color = iteam.colors[1]) +
+  geom_text(aes(x = 375, y = hom_projections + 10,
+                label = paste(hom_projections, "(proj.)"),
+                hjust = 0), 
+                color = iteam.colors[3]) +
+  #scale_alpha_manual(values = as.factor(c(1, 1, 0.3, 1., 1))) +
+  theme_iteam_presentations() +
+  scale_color_discrete_iteam() +
+  theme(legend.title = element_blank()) +
+  scale_x_continuous(breaks = c(0, 100, 200, 300, 365),
+                     limits = c(0, 450)) +
+  ylab("Cumulative Homicides") +
+  xlab("Day of Year") 
+
+#ggsave(filename = paste0(folder, last_date, "cumulative_hom_shoot.png"), cum.plot, device = "png", 
+#       width = 4, height = 2, units = "in")
+
+cum.plot
+```
+
+```{r fig.width = 4, fig.height=2}
+df %>%
+  filter(description %in% c("HOMICIDE", "SHOOTING"),
+         year(crimedate) %in% c(2018, 2019)) %>%
+  count(crimedate) %>%
+  group_by(year(crimedate)) %>%
+  arrange(crimedate) %>%
+  mutate(day_of_year = row_number(),
+         hs_cumsum = cumsum(n)) %>%
+  filter(month(crimedate) == 8)
+```
+```{r fig.width = 3, fig.height=1.5}
+cum.plot <- df_geo@data %>%
+  filter(description %in% c("HOMICIDE", "SHOOTING"),
+         year(crimedate) == 2019) %>%
+  complete(crimedate = seq.Date(as.Date(min(df_geo@data$crimedate)), 
+                                as.Date(max(df_geo@data$crimedate)),
+                                by="day")) %>%
+  count(description, crimedate) %>%
+  replace_na(list(n = 0)) %>%
+  arrange(crimedate) %>%
+  mutate(day_of_year = as.numeric(strftime(crimedate, "%j"))) %>%
+  group_by(description) %>%
+  mutate(hs_cumsum = cumsum(n),
+         hs_cumpct = hs_cumsum / sum(n)) %>%
+  ggplot(aes(day_of_year, hs_cumpct, 
+             group = description, 
+             color = as.factor(description))) +
+  geom_line() +
+  #scale_alpha_manual(values = as.factor(c(1, 1, 0.3, 1., 1))) +
+  theme_iteam_presentations() +
+  scale_color_discrete_iteam() +
+  theme(legend.title = element_blank()) +
+  ylab("Cum. Hom. + Shots.") +
+  xlab("Day of Year") +
+  xlim(c(0,250))
+
+#ggsave(filename = paste0(folder, last_date, "cumulative_hom_shoot.png"), cum.plot, device = "png", 
+#       width = 4, height = 2, units = "in")
+
+cum.plot
+```
+
+```{r fig.width = 3, fig.height=1.5}
+counts %>%
+  filter(description %in% c("HOMICIDE", "SHOOTING"),
+         year(crimedate) == 2019) %>%
+  group_by(description) %>%
+  mutate(hs_cumsum = cumsum(n),
+         day_of_year = as.numeric(strftime(crimedate, "%j")),
+         day.avg = hs_cumsum / day_of_year) %>%
+  ggplot(aes(day_of_year, day.avg)) +
+  geom_line(aes(color = description)) 
+
+```
+```{r fig.width = 3, fig.height=1.5}
+counts %>%
+  filter(description %in% c("HOMICIDE", "SHOOTING"),
+         year(crimedate) == 2019) %>%
+  group_by(description) %>%
+  mutate(hs_cumsum = cumsum(n),
+         day_of_year = as.numeric(strftime(crimedate, "%j")),
+         day.avg = hs_cumsum / day_of_year) %>%
+  select(-crimedate, -n, -day.avg, - district) %>%
+  spread(description, hs_cumsum) %>%
+  mutate(fatality = HOMICIDE / (HOMICIDE + SHOOTING)) %>%
+  ggplot(aes(day_of_year, fatality)) + 
+  geom_line()
+
+```
+
+```{r fig.width = 1.5, fig.height = 1.5}
+roll90_single_district_plot("ROBBERY", "NORTHEAST")
+
+```
+
+
+```{r fig.width = 3, fig.height=1.5}
+dec_the_inc <- df_geo@data %>%
+  filter(description_grouped == "HOMICIDE/SHOOTING") %>%
+  count(crimedate) %>%
+  complete(crimedate = seq.Date(as.Date(min(df_geo@data$crimedate)), 
+                                as.Date(max(df_geo@data$crimedate)),
+                                by="day")) %>%
+  replace_na(list(n = 0)) %>%
+  arrange(crimedate) %>%
+  mutate(day_of_year = as.numeric(strftime(crimedate, "%j")),
+         crime.year = year(crimedate)) %>%
+  filter(crime.year %in% c(2018, 2019)) %>%
+  group_by(crime.year) %>%
+  mutate(hs_cumsum = cumsum(n)) %>%
+  select(-n, -crimedate) %>%
+  spread(key = crime.year, value = hs_cumsum) %>%
+  mutate(pct_change = (`2019` - `2018`) / `2018`)
+  
+dec_the_inc %>%
+  ggplot(aes(day_of_year, pct_change)) +
+  geom_line() +
+  geom_point(data = subset(dec_the_inc, day_of_year == yday(last_date)), 
+             aes(x = day_of_year, y = pct_change),
+             color = "red", size =2) +
+  geom_point(data = subset(dec_the_inc, day_of_year == yday(last_date) - 28), 
+             aes(x = day_of_year, y = pct_change),
+             color = "red", size =2) +
+    geom_point(data = subset(dec_the_inc, day_of_year == yday("2019-07-01")), 
+             aes(x = day_of_year, y = pct_change),
+             color = "red", size =2) +
+  theme_iteam_presentations() +
+  scale_color_discrete_iteam() +
+  theme(legend.title = element_blank()) +
+  ylab("% Change from 2018") +
+  xlab("Day of Year")  +
+  scale_y_continuous(limits = c(-.5, .5), labels = scales::percent) 
+  
+# ggsave(filename = paste0(folder, last_date, "cumulative_hom_shoot.png"), cum.plot, device = "png", 
+#        width = 4, height = 2, units = "in")
+
+dec_the_inc
+```
+
+
+```{r}
+df_geo@data %>%
+  count(year(crimedate), description)
+
+```
+```{r fig.width = 3, fig.height=2}
+roll90_single_district_plot("HOMICIDE + SHOOTING", "SOUTHWEST")
+```
 

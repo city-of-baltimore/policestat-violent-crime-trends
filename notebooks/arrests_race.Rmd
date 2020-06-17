@@ -1,0 +1,92 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+library(tidyverse)
+library(lubridate)
+library(ggiteam)
+```
+
+
+```{r}
+arrests <- read_csv("../data/raw/arrests/2020-06-10_arrests.csv")
+```
+
+```{r}
+top20_arrest_desc <- arrests %>%
+  count(ChargeDescription) %>%
+  arrange(desc(n)) %>%
+  top_n(50) 
+```
+
+```{r fig.height=6, fig.width=3, out.height="100%"}
+pct_black_rank <- arrests %>% 
+  filter(ChargeDescription %in% top20_arrest_desc$ChargeDescription) %>%
+  count(ChargeDescription, Race) %>%
+  group_by(ChargeDescription) %>%
+  mutate(pct_race = round(n / sum(n), 3)) %>%
+  filter(Race == "B") %>% 
+  ungroup() %>%
+  arrange(desc(pct_race)) %>%
+  mutate(rank = row_number()) %>%
+  select(ChargeDescription, rank)
+
+arrest_race_breakdown_plot <- arrests %>% 
+  filter(ChargeDescription %in% top20_arrest_desc$ChargeDescription) %>%
+  count(ChargeDescription, Race) %>%
+  left_join(pct_black_rank) %>%
+  group_by(ChargeDescription) %>%
+  mutate(pct_race = round(n / sum(n), 3)) %>%
+  ungroup() %>%
+  mutate(Race = fct_relevel(as.factor(Race), "W", "A", "I", "U","B")) %>%
+  ggplot(aes(reorder(ChargeDescription, desc(rank)),
+             pct_race, 
+             fill = Race)) +
+  geom_col() +
+  coord_flip() +
+  scale_fill_manual(values = 
+    c(
+      "gray80",
+      iteam.colors[5],
+      iteam.colors[2],
+      iteam.colors[3],
+      iteam.colors[1]
+    )
+  ) +
+  theme_iteam_google_docs() +
+  geom_hline(aes(yintercept=.62))+
+  annotate(
+    geom = "text", 
+    x = 50, 
+    y = .6, 
+    label = "% Baltimore Population Black",
+    hjust = 1,
+    size = 3) +
+  theme(axis.title.y = element_blank()) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(y = "Percent of Arrests",
+       title = "Race Breakdown of Arrests by Charge Description",
+       subtitle = "Top 50 Charge Descriptions, BPD Arrests Jan 2014 - Apr 2019",
+       caption = "https://data.baltimorecity.gov/Public-Safety/BPD-Arrests/3i3v-ibrt/data") 
+
+ggsave(plot= arrest_race_breakdown_plot, filename = "../output/plots/arrest_race_breakdown_2014-Apr2020.png",
+      width = 6, height = 8)
+
+arrest_race_breakdown_plot
+```
+
+```{r}
+ arrests %>% 
+  filter(ChargeDescription %in% top20_arrest_desc$ChargeDescription) %>%
+  count(ChargeDescription, Race) %>%
+  left_join(pct_black_rank) %>%
+  group_by(ChargeDescription) %>%
+  mutate(pct_race = round(n / sum(n), 3)) %>%
+  ungroup() %>%
+  mutate(Race = fct_relevel(as.factor(Race), "B", "A", "I", "U", "W")) %>%
+  arrange(Race)
+```
+

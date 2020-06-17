@@ -1,0 +1,33 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r}
+roll28_district_facet_plot(rolling_counts, "HOMICIDE + SHOOTING") +
+  theme(panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        plot.subtitle = element_blank(),
+        plot.caption = element_blank(),
+        strip.text = element_blank(),
+        axis.text.y = element_blank())
+```
+
+```{r fig.height = 1.25 ,fig.width = 2.}
+roll90_single_district_plot("HOMICIDE + SHOOTING", "SOUTHWEST")
+```
+```{r}
+rolling_counts_districts %>%
+  filter(district == "SOUTHWEST",
+         description == "HOMICIDE + SHOOTING",
+         year(crimedate) == 2020) %>%
+  ggplot(aes(crimedate, roll_90)) +
+  geom_line()
+```
+

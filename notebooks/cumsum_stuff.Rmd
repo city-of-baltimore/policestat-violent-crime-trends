@@ -1,0 +1,133 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r}
+start_date <- min(df_geo@data$crimedate)
+end_date <- max(df_geo@data$crimedate)
+# calc cumsums
+cumsums <- df_geo@data %>%
+  #filter(description %in% c("HOMICIDE")) %>%
+  count(description, crimedate) %>%
+  group_by(description) %>%
+  complete(crimedate = seq.Date(start_date, 
+                                end_date,
+                                by="day")) %>%
+  replace_na(list(n = 0)) %>%
+  arrange(description, crimedate) %>%
+  mutate(day_of_year = as.numeric(strftime(crimedate, "%j")),
+         crime_year = year(crimedate)) %>%
+  group_by(description, crime_year) %>%
+  mutate(crime_cumsum = cumsum(n)) %>%
+  ungroup()
+```
+
+```{r fig.height = 2, fig.width = 8}
+this_year_color <- iteam.colors[1]
+
+# plot faceted by crime type
+cum_plot <- ggplot(cumsums) +
+  geom_point(data = cumsums %>%
+               filter(crime_year == 2020) %>%
+               group_by(description) %>%
+               summarise(last_day = max(day_of_year), 
+                         last_cumsum = max(crime_cumsum)),
+             aes(x = last_day, y = last_cumsum),
+             color = this_year_color) +
+  geom_line(data = cumsums,
+            aes(day_of_year, crime_cumsum, 
+                group = crime_year, 
+                color = as.factor(crime_year))) +
+  facet_wrap(~description, nrow = 1, scales = "free_y") +
+  
+  # ADD POINTS AT CURVE END
+
+  # geom_point(aes(x = 365, 
+  #                y = hom_cumsums %>% 
+  #                  filter(crime.year == 2018) %>%
+  #                  summarise(max(hom_cumsum)) %>%
+  #                  pull()),
+  #            color = iteam.colors[2]) +
+  # geom_point(aes(x = 365, 
+  #                y = hom_cumsums %>% 
+  #                  filter(crime.year == 2017) %>%
+  #                  summarise(max(hom_cumsum)) %>%
+  #                  pull()),
+  #            color = iteam.colors[1]) +
+  # geom_point(aes(x = 365, y = hom_projections), color = iteam.colors[3]) +
+  
+  #ADD LABELS FOR POINTS AT CURVE END
+  # geom_text(aes(x = hom_cumsums %>% 
+  #                 filter(crime.year == 2019) %>%
+  #                 summarise(max(day_of_year)) %>%
+  #                 pull(), 
+  #               y = hom_cumsums %>% 
+  #                 filter(crime.year == 2019) %>%
+  #                 summarise(max(hom_cumsum)) %>%
+  #                 pull() +10,
+  #               label = hom_cumsums %>% 
+  #                 filter(crime.year == 2019) %>%
+  #                 summarise(max(hom_cumsum)) %>%
+  #                 pull(),
+  #               hjust = 1),
+  #           color = iteam.colors[3]) +
+  # geom_text(aes(x = 375, 
+  #               y = hom_cumsums %>% 
+  #                 filter(crime.year == 2018) %>%
+  #                 summarise(max(hom_cumsum)) %>%
+  #                 pull(),
+  #               label = hom_cumsums %>% 
+  #                 filter(crime.year == 2018) %>%
+  #                 summarise(max(hom_cumsum)) %>%
+  #                 pull(),
+  #               hjust = 0),
+  #           color = iteam.colors[2]) +
+  # geom_text(aes(x = 375, 
+  #               y = hom_cumsums %>% 
+  #                 filter(crime.year == 2017) %>%
+  #                 summarise(max(hom_cumsum)) %>%
+  #                 pull() - 10,
+  #               label = hom_cumsums %>% 
+  #                 filter(crime.year == 2017) %>%
+  #                 summarise(max(hom_cumsum)) %>%
+  #                 pull(),
+  #               hjust = 0),
+  #           color = iteam.colors[1]) +
+  # 
+  theme_iteam_presentations() +
+  scale_color_manual(values = c("gray80", "gray50", "gray20", this_year_color)) +
+  theme(legend.title = element_blank()) +
+  scale_x_continuous(breaks = c(0, 180, 365),
+                     limits = c(0, 450)) +
+  ylab("Cumulative Events") +
+  xlab("Day of Year") 
+
+```
+
+```{r}
+# SAVE FOR SLIDES
+ggsave(filename = paste0(folder, last_date, "_cumulative_facet.png"), 
+       cum_plot, device = "png", 
+       width = 14, height = 3, units = "in")
+```
+
+```{r}
+max_day_of_year <- cumsums %>%
+  filter(crime_year == 2020) %>%
+  summarise(max(day_of_year)) %>%
+  pull()
+  
+cumsums %>%
+  filter(crime_year %in% c(2019, 2020),
+         day_of_year == max_day_of_year ) %>%
+  select(-crimedate, -n, -day_of_year) %>%
+  spread(key = crime_year, value = crime_cumsum) %>%
+  mutate(pct_change = scales::percent((`2020` - `2019`)/`2019`))
+```
+
+
