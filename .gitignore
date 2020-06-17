@@ -2,6 +2,7 @@
 /data/raw/*
 /data/processed/*
 /data/spreadsheets/*
+!/data/raw/Districts
 !/data/raw/Districts/*
 
 # History files
