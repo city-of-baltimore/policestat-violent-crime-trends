@@ -12,7 +12,9 @@ library(readxl)
 
 source("src/functions.R")
 
-districts <- readOGR("data/raw/Districts", "Police_Districts",
+folder <- paste0("../../../../Google Drive/Office of Performance & Innovation/CitiStat/PoliceStat/Regular Reporting/", last_date, "/")
+
+districts <- readOGR("data/raw/districts", "Police_Districts",
                      verbose = T)
 
 # Get data from Open Baltimore
@@ -124,13 +126,9 @@ rolling_counts <- counts %>%
   ungroup() %>%
   arrange(description, crimedate)
 
-
-folder <- paste0("../../../../Google Drive/Office of Performance & Innovation/CitiStat/PoliceStat/Regular Reporting/", last_date, "/")
-
 if (!dir.exists(folder)){
   dir.create(folder)
 }
-
 
 
 # City-wide plots save
