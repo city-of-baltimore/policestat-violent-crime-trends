@@ -45,3 +45,6 @@ vignettes/*.pdf
 
 # Scratch files
 *scratch*.*
+
+# output images
+/output/plots/*
