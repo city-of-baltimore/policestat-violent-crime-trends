@@ -19,15 +19,42 @@ roll28_district_facet_plot(rolling_counts, "HOMICIDE + SHOOTING") +
         axis.text.y = element_blank())
 ```
 
-```{r fig.height = 1.25 ,fig.width = 2.}
-roll90_single_district_plot("HOMICIDE + SHOOTING", "SOUTHWEST")
+```{r fig.height = 1.55,fig.width = 2.75}
+roll90_single_district_plot("AGG. ASSAULT"v, "NORTHEAST")
 ```
 ```{r}
 rolling_counts_districts %>%
-  filter(district == "SOUTHWEST",
+  filter(district == "SOUTHEAST",
          description == "HOMICIDE + SHOOTING",
          year(crimedate) == 2020) %>%
   ggplot(aes(crimedate, roll_90)) +
   geom_line()
+```
+
+```{r fig.height = 3, fig.width = 3}
+cumsums_district %>%
+  filter(district != "UNKNOWN",
+         description == "RAPE",
+         day_of_year == 185, 
+         year(crimedate) %in% c(2018, 2019, 2020)) %>%
+  ungroup() %>%
+  select(`year(crimedate)`, district, cum) %>%
+  #spread(key = `year(crimedate)`, value = cum) %>%
+  #mutate(pct_change = (`2020`-`2019`)/`2019`)
+  ggplot(aes(`year(crimedate)`, cum)) +
+  geom_line(aes(color = district)) +
+  theme_iteam_presentations() +
+  scale_x_continuous(breaks = c(2018, 2019, 2020)) +
+  ylim(c(0, 30)) +
+  theme(legend.title = element_blank(),
+        axis.title.x = element_blank()) +
+  ylab("count")
+  
+```
+
+```{r}
+cumsums %>%
+  filter(description == "RAPE",
+         day_of_year == 185)
 ```
 

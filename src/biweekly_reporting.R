@@ -12,124 +12,44 @@ library(readxl)
 
 source("src/functions.R")
 
-folder <- paste0("../../../../Google Drive/Office of Performance & Innovation/CitiStat/PoliceStat/Regular Reporting/", last_date, "/")
-
 districts <- readOGR("data/raw/districts", "Police_Districts",
                      verbose = T)
 
-# Get data from Open Baltimore
-query <- paste0("https://data.baltimorecity.gov/resource/wsfq-mvij.json?$where=",
-                "(Description like 'HOMICIDE' OR ",
-                "Description like 'SHOOTING' OR ", 
-                "Description like 'RAPE' OR ", 
-                "Description like 'AGG. ASSAULT' OR ",
-                "contains(Description, 'ROBBERY'))")
-
-df <- read.socrata(query)
-
-# Some cleaning
-df <- df %>% 
-  filter(!is.na(latitude),
-         year(crimedate) >= 2017) %>%
-  mutate(crimedate = as.Date(crimedate),
-         longitude = as.numeric(longitude),
-         latitude = as.numeric(latitude),
-         description = ifelse(grepl("ROBBERY", description), 
-                              "ROBBERY", description),
-         description_grouped = 
-           case_when(
-             grepl("ROBBERY", description) & grepl("FIREARM", weapon) ~ "ARMED ROBBERY",
-             grepl("ROBBERY", description) & !grepl("FIREARM", weapon) ~ "UNARMED ROBBERY",
-             description %in% c("HOMICIDE", "SHOOTING") ~ "HOMICIDE/SHOOTING",
-             TRUE ~ description)
-  )
+message(paste0(Sys.time(), ": ", "Fetching data from Open Baltimore")) 
+violent_crime <- get_violent_crime_socrata()
 
 # Last date in dataset
-last_date <- max(df$crimedate)
+last_date <- max(violent_crime$crimedate)
 
-# convert crime df to geospatial
-df_geo <- SpatialPointsDataFrame(
-  coords = df %>% select(longitude, latitude), 
-  df, 
-  proj4string = CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
-)
+folder <- paste0("../../../../Google Drive/Office of Performance & Innovation/CitiStat/PoliceStat/Rolling 28 and 90 Day Plots/", last_date, "/")
+
+# convert crime violent_crime to geospatial
+# violent_crime_geo <- SpatialPointsDataFrame(
+#   coords = violent_crime %>% select(longitude, latitude), 
+#   volent_crime, 
+#   proj4string = CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
+# )
 
 # transform to right coords system
-df_geo <- spTransform(
-  df_geo, 
-  CRSobj = CRS("+init=epsg:4326 +proj=longlat +datum=WGS84 +no_defs +ellps=WGS84
-+towgs84=0,0,0")
-)
+# violent_crime_geo <- spTransform(
+#   violent_crime_geo, 
+#   CRSobj = CRS("+init=epsg:4326 +proj=longlat +datum=WGS84 +no_defs +ellps=WGS84
+# +towgs84=0,0,0")
+# )
 
 # Rolling counts
 
-# By district
+message(paste0(Sys.time(), ": ", "Getting dataframes for rolling daily counts")) 
 
-counts_districts <- df_geo@data %>%
-  count(description, district, crimedate) %>%
-  group_by(description, district) %>%
-  complete(crimedate = seq.Date(as.Date(min(df_geo@data$crimedate)), 
-                                as.Date(max(df_geo@data$crimedate)),
-                                by="day")) %>%
-  replace_na(list(n = 0)) %>%
-  ungroup()
+rolling_counts_districts <- get_rolling_counts_by_district(violent_crime)
 
-hom_shot_combo_district_counts <- counts_districts %>% 
-  filter(description %in% c("SHOOTING", "HOMICIDE")) %>% 
-  group_by(district, crimedate) %>% 
-  select(description, district, crimedate, n) %>% 
-  spread(key = description, value = n) %>% 
-  mutate(n = HOMICIDE + SHOOTING, 
-         description = "HOMICIDE + SHOOTING") %>% 
-  select(-HOMICIDE, -SHOOTING) %>% 
-  ungroup()
-
-rolling_counts_districts <- counts_districts %>%
-  bind_rows(hom_shot_combo_district_counts) %>%
-  arrange(crimedate) %>%
-  group_by(district, description) %>%
-  mutate(roll_28 = roll_sum(x = n, n = 28, align = "right", fill = NA),
-         roll_7 = roll_sum(x = n, n = 7, align = "right", fill = NA),
-         roll_90 = roll_sum(x = n, n = 90, align = "right", fill = NA)) %>%
-  ungroup() %>%
-  arrange(description, district, crimedate)
-
-# Citywide
-
-counts <- df_geo@data %>%
-  count(description, crimedate) %>%
-  group_by(description) %>%
-  complete(crimedate = seq.Date(as.Date(min(df_geo@data$crimedate)), 
-                                as.Date(max(df_geo@data$crimedate)),
-                                by="day")) %>%
-  replace_na(list(n = 0)) %>%
-  mutate(district = "CITYWIDE")
-
-hom_shot_combo_counts <- counts %>% 
-  filter(description %in% c("SHOOTING", "HOMICIDE")) %>% 
-  group_by(crimedate) %>% 
-  select(description, crimedate, n) %>% 
-  spread(key = description, value = n) %>% 
-  mutate(n = HOMICIDE + SHOOTING, 
-         description = "HOMICIDE + SHOOTING",
-         district = "CITYWIDE") %>% 
-  select(-HOMICIDE, -SHOOTING) %>% 
-  ungroup()
-
-rolling_counts <- counts %>%
-  bind_rows(hom_shot_combo_counts) %>%
-  arrange(crimedate) %>%
-  group_by(description) %>%
-  mutate(roll_28 = roll_sum(x = n, n = 28, align = "right", fill = NA),
-         roll_7 = roll_sum(x = n, n = 7, align = "right", fill = NA),
-         roll_90 = roll_sum(x = n, n = 90, align = "right", fill = NA)) %>%
-  ungroup() %>%
-  arrange(description, crimedate)
+rolling_counts <- get_rolling_counts_citywide(violent_crime)
 
 if (!dir.exists(folder)){
   dir.create(folder)
 }
 
+message(paste0(Sys.time(), ": ", "Saving plots to: ", folder)) 
 
 # City-wide plots save
 for(desc in unique(rolling_counts$description)){
@@ -195,11 +115,11 @@ for(desc in unique(rolling_counts_districts$description)){
 }
 
 # Cumulative homicides/shooting plots
-hom_cumsums <- df_geo@data %>%
+hom_cumsums <- violent_crime %>%
   filter(description %in% c("HOMICIDE")) %>%
   count(crimedate) %>%
-  complete(crimedate = seq.Date(as.Date(min(df_geo@data$crimedate)), 
-                                as.Date(max(df_geo@data$crimedate)),
+  complete(crimedate = seq.Date(as.Date(min(violent_crime$crimedate)), 
+                                as.Date(max(violent_crime$crimedate)),
                                 by="day")) %>%
   replace_na(list(n = 0)) %>%
   arrange(crimedate) %>%
@@ -304,11 +224,11 @@ ggsave(filename = paste0(folder, last_date, "_cumulative_homshot.png"), cum.plot
 
 # Decrease the increase
 
-dec_the_inc <- df_geo@data %>%
+dec_the_inc <- violent_crime %>%
   filter(description_grouped == "HOMICIDE/SHOOTING") %>%
   count(crimedate) %>%
-  complete(crimedate = seq.Date(as.Date(min(df_geo@data$crimedate)), 
-                                as.Date(max(df_geo@data$crimedate)),
+  complete(crimedate = seq.Date(as.Date(min(violent_crime$crimedate)), 
+                                as.Date(max(violent_crime$crimedate)),
                                 by="day")) %>%
   replace_na(list(n = 0)) %>%
   arrange(crimedate) %>%
@@ -343,16 +263,13 @@ dec_the_inc_plot <- dec_the_inc %>%
 ggsave(filename = paste0(folder, last_date, "_decrease_the_increase.png"), dec_the_inc_plot, device = "png", 
        width = 7, height = 4, units = "in")
 
-
-
-
 # Cumulative faceted --------
 
-start_date <- min(df_geo@data$crimedate)
-end_date <- max(df_geo@data$crimedate)
+start_date <- min(violent_crime$crimedate)
+end_date <- max(violent_crime$crimedate)
 
 # calc cumsums
-cumsums <- df_geo@data %>%
+cumsums <- violent_crime %>%
   #filter(description %in% c("HOMICIDE")) %>%
   count(description, crimedate) %>%
   group_by(description) %>%
@@ -370,16 +287,19 @@ cumsums <- df_geo@data %>%
 this_year_color <- iteam.colors[1]
 
 # plot faceted by crime type
-cum_plot <- ggplot(cumsums) +
+cum_plot <- cumsums %>%
+  filter(crime_year >= 2017,
+         description %in% c("ROBBERY (ALL)", "AGG. ASSAULT", "RAPE", "HOMICIDE", "SHOOTING")) %>%
+  ggplot() +
   geom_point(data = cumsums %>%
-               filter(crime_year == 2020) %>%
+               filter(crime_year == 2020,
+                      description %in% c("ROBBERY (ALL)", "AGG. ASSAULT", "RAPE", "HOMICIDE","SHOOTING")) %>%
                group_by(description) %>%
                summarise(last_day = max(day_of_year), 
                          last_cumsum = max(crime_cumsum)),
              aes(x = last_day, y = last_cumsum),
              color = this_year_color) +
-  geom_line(data = cumsums,
-            aes(day_of_year, crime_cumsum, 
+  geom_line(aes(day_of_year, crime_cumsum, 
                 group = crime_year, 
                 color = as.factor(crime_year))) +
   facet_wrap(~description, nrow = 1, scales = "free_y") +
@@ -390,10 +310,12 @@ cum_plot <- ggplot(cumsums) +
                      limits = c(0, 450)) +
   ylab("Cumulative Events") +
   xlab("Day of Year") 
-
+ 
 ggsave(filename = paste0(folder, last_date, "_cumulative_facet.png"), 
        cum_plot, device = "png", 
        width = 14, height = 3, units = "in")
+
+message(paste0(Sys.time(), ": ", "All plots saved"))	
 
 # table 
 max_day_of_year <- cumsums %>%
@@ -410,3 +332,9 @@ cumsums %>%
   t() %>%
   as.data.frame() %>%
   write_csv(paste0(folder, last_date, "_YTD_changes.csv"))
+
+cumsums_district <- rolling_counts_districts %>%
+  mutate(day_of_year = yday(crimedate)) %>%
+  group_by(district, description, year(crimedate)) %>%
+  mutate(cum = cumsum(n))
+

@@ -1,0 +1,69 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r}
+library(leaflet.extras)
+```
+
+
+```{r}
+df_geo <- df %>% filter(!is.na(latitude))
+# convert crime df to geospatial
+df_geo <- SpatialPointsDataFrame(
+  coords = df_geo %>% select(longitude, latitude),
+  df_geo,
+  proj4string = CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
+)
+
+# transform to right coords system
+df_geo <- spTransform(
+  df_geo,
+  CRSobj = CRS("+init=epsg:4326 +proj=longlat +datum=WGS84 +no_defs +ellps=WGS84
++towgs84=0,0,0")
+)
+```
+
+```{r}
+hom_shot <- subset(df_geo, description_grouped == "HOMICIDE/SHOOTING")
+```
+
+```{r fig.height = 8, fig.width = 8, out.height='100%'}
+hom_shot_2019 <- subset(hom_shot, (crimedate >= "2019-04-01") & (crimedate <= "2019-06-30"))
+
+leaflet() %>%
+  setView(lng = -76.6, lat = 39.3, zoom = 11) %>%
+  addProviderTiles(providers$Stamen.TonerLite) %>%  
+  addCircleMarkers(data = hom_shot_2019@data,
+                   radius = 0.2,
+                   opacity = 0.5,
+                   color = "black") %>%
+  addHeatmap(data = hom_shot_2019@data,
+             #minOpacity = 0.1,
+             blur = 40, 
+             max = 1, 
+             radius = 20)
+```
+
+
+```{r fig.height = 8, fig.width = 8, out.height='100%'}
+hom_shot_2020 <- subset(hom_shot, (crimedate >= "2020-04-01") & (crimedate <= "2020-06-30"))
+
+leaflet() %>%
+  setView(lng = -76.6, lat = 39.3, zoom = 11) %>%
+  addProviderTiles(providers$Stamen.TonerLite) %>%  
+  addCircleMarkers(data = hom_shot_2020@data,
+                   radius = 0.2,
+                   opacity = 0.5,
+                   color = "black") %>%
+  addHeatmap(data = hom_shot_2020@data,
+             #minOpacity = 0.1,
+             blur = 40, 
+             max = 1, 
+             radius = 20)
+```
