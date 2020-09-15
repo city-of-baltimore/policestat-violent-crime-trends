@@ -12,6 +12,8 @@ library(readxl)
 
 source("src/functions.R")
 
+red_orange <- "#f05a28"
+
 districts <- readOGR("data/raw/districts", "Police_Districts",
                      verbose = T)
 
@@ -282,9 +284,28 @@ cumsums <- violent_crime %>%
          crime_year = year(crimedate)) %>%
   group_by(description, crime_year) %>%
   mutate(crime_cumsum = cumsum(n)) %>%
-  ungroup()
+  ungroup() 
 
-this_year_color <- iteam.colors[1]
+group_cumsums <- violent_crime %>%
+  filter(description_grouped %in% c("ROBBERY (ALL)", "HOMICIDE + SHOOTING")) %>%
+  count(description_grouped, crimedate) %>%
+  group_by(description_grouped) %>%
+  complete(crimedate = seq.Date(start_date, 
+                                end_date,
+                                by="day")) %>%
+  replace_na(list(n = 0)) %>%
+  arrange(description_grouped, crimedate) %>%
+  mutate(day_of_year = as.numeric(strftime(crimedate, "%j")),
+         crime_year = year(crimedate)) %>%
+  group_by(description_grouped, crime_year) %>%
+  mutate(crime_cumsum = cumsum(n)) %>%
+  ungroup()
+  
+cumsums <- bind_rows(cumsums, group_cumsums %>% rename("description" = description_grouped))
+
+cumsums %>% count(description)
+
+this_year_color <- red_orange
 
 # plot faceted by crime type
 cum_plot <- cumsums %>%
@@ -293,7 +314,7 @@ cum_plot <- cumsums %>%
   ggplot() +
   geom_point(data = cumsums %>%
                filter(crime_year == 2020,
-                      description %in% c("ROBBERY (ALL)", "AGG. ASSAULT", "RAPE", "HOMICIDE","SHOOTING")) %>%
+                      description %in% c("ROBBERY (ALL)", "AGG. ASSAULT", "RAPE", "HOMICIDE", "SHOOTING")) %>%
                group_by(description) %>%
                summarise(last_day = max(day_of_year), 
                          last_cumsum = max(crime_cumsum)),
@@ -301,10 +322,12 @@ cum_plot <- cumsums %>%
              color = this_year_color) +
   geom_line(aes(day_of_year, crime_cumsum, 
                 group = crime_year, 
-                color = as.factor(crime_year))) +
+                color = as.factor(crime_year),
+                size = as.factor(crime_year))) +
   facet_wrap(~description, nrow = 1, scales = "free_y") +
   theme_iteam_presentations() +
   scale_color_manual(values = c("gray80", "gray50", "gray20", this_year_color)) +
+  scale_size_manual(values = c(.5, .5, .5, 1.3)) +
   theme(legend.title = element_blank()) +
   scale_x_continuous(breaks = c(0, 180, 365),
                      limits = c(0, 450)) +
@@ -314,6 +337,40 @@ cum_plot <- cumsums %>%
 ggsave(filename = paste0(folder, last_date, "_cumulative_facet.png"), 
        cum_plot, device = "png", 
        width = 14, height = 3, units = "in")
+
+# homicides and shootings against goal
+cum_goal_hom_shot_plot <- cumsums %>%
+  filter(crime_year == 2020,
+         description == "HOMICIDE + SHOOTING") %>%
+  ggplot() +
+  geom_point(data = cumsums %>%
+               filter(crime_year == 2020,
+                      description == "HOMICIDE + SHOOTING") %>%
+               group_by(description) %>%
+               summarise(last_day = max(day_of_year), 
+                         last_cumsum = max(crime_cumsum)),
+             aes(x = last_day, y = last_cumsum),
+             color = this_year_color) +
+  geom_line(aes(day_of_year, crime_cumsum, 
+                group = crime_year, 
+                color = as.factor(crime_year),
+                size = as.factor(crime_year))) +
+  geom_line(data = data.frame(x = c(0, 365), y = c(0, 1000)), aes(x = x, y = y)) +
+  geom_point(aes(x = 365, y = 1000)) +
+  theme_iteam_presentations() +
+  scale_color_manual(values = c(red_orange)) +
+  scale_size_manual(values = c(1.3)) +
+  theme(legend.title = element_blank(),
+        legend.position = "none") +
+  scale_x_continuous(breaks = c(0, 180, 365),
+                     limits = c(0, 450)) +
+  labs(#title = "Cumulative Homicides + Shootings",
+       y = "Homicides + Shootings",
+       x = "Day of Year") 
+
+ggsave(filename = paste0(folder, last_date, "_hom_shot+goal.png"), 
+       cum_goal_hom_shot_plot, device = "png", 
+       width = 6, height = 6, units = "in")
 
 message(paste0(Sys.time(), ": ", "All plots saved"))	
 
@@ -337,4 +394,5 @@ cumsums_district <- rolling_counts_districts %>%
   mutate(day_of_year = yday(crimedate)) %>%
   group_by(district, description, year(crimedate)) %>%
   mutate(cum = cumsum(n))
+
 

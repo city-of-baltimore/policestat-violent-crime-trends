@@ -6,8 +6,11 @@ output: html_notebook
 ```{r}
 library(tidyverse)
 library(lubridate)
-
+library(RcppRoll)
+library(ggiteam)
 source("../src/functions.R")
+
+red_orange <- "#f05a28"
 ```
 
 ```{r}
@@ -53,6 +56,7 @@ deseasoned_homicides_shootings_w_this_year <- rolling_counts_citywide %>%
     deseasoned_homicides_shootings_historical %>%
       filter(crimedate.year == 2016) %>%
       select(day_of_year,
+             seasonal_ratio,
              seasonal_act_avg,
              seasonal_ratio_avg),
     by = "day_of_year"
@@ -112,82 +116,180 @@ deseasoned_homicides_shootings_w_this_year %>%
        subtitle = "Seasonally Adjusted, Actual, and 2016-2019 Seasonal Average")
 ```
 
-
+```{r fig.width = 6, fig.height = 1.2}
+deseasoned_homicides_shootings_historical %>%
+  select(crimedate, seasonal_ratio) %>%
+  #filter(crimedate >= max(crimedate) - 3 * 365) %>%
+  #filter(type != "deseasoned_90d") %>%
+  ggplot(aes(crimedate, seasonal_ratio)) +
+  geom_line(size = .7, color = iteam.colors[3]) +
+  #facet_grid(rows = vars(type), scales = "free_y") +
+  scale_x_date(date_minor_breaks = "3 month",
+               date_breaks = "1 year",
+               date_labels = "%b\n%y",
+               limits = c(as.Date("2016-01-01"), as.Date("2020-08-01"))
+               ) +
+  theme_iteam_presentations() +
+  scale_color_discrete_iteam() +
+  theme(axis.title.x = element_blank(),
+        panel.grid.major.x = element_line(color="gray40"),
+        panel.grid.minor.x = element_line(color = "gray70")) 
+```
 
 ```{r}
 deseasoned_all_citywide <- deseason_rolling_90d_counts(rolling_counts_citywide)
 deseasoned_all_by_district <- deseason_rolling_90d_counts(rolling_counts_by_district)
 ```
 
-```{r fig.width = 4, fig.height = 4, out.height="100%"}
+```{r fig.width = 2.5, fig.height = 3, out.height="100%", out.height="100%"}
 deseasoned_all_citywide %>%
   filter(description %in% c("AGG. ASSAULT", "RAPE", "HOMICIDE + SHOOTING", "ROBBERY (ALL)")) %>%
   ggplot(aes(crimedate)) +
+  geom_rect(aes(xmin=md_stay_at_home_start, xmax=md_stay_at_home_end, ymin=0, ymax=Inf),
+            fill = "gray90", alpha = 0.5) +
   geom_line(aes(y=deseasoned_90d, color = description)) +
+  geom_point(data = . %>% 
+               filter(crimedate == max(crimedate) - 365), 
+             aes(x = crimedate, y = deseasoned_90d),
+             color = iteam.colors[1], size = 3) +
+  geom_point(data = . %>% 
+               filter(crimedate == max(crimedate)), 
+             aes(x = crimedate, y = deseasoned_90d),
+             color = red_orange, size = 3) +
   facet_wrap(ncol = 1, ~description, scales="free_y") +
   theme_iteam_presentations() +
   scale_color_discrete_iteam() +
   theme(legend.position = "none",
-        axis.title.x = element_blank()) +
+        axis.title.x = element_blank(),
+        panel.grid.major.x = element_line(color = "gray90")) +
   labs(title = "Seasonally Adjusted 90-Day Crime Trends") +
   labs(y = "90 Day Rolling Total")
 ```
 
-
-```{r fig.width = 4, fig.height = 4, out.height="100%"}
-deseasoned_all_citywide %>%
-  filter(description %in% c("AGG. ASSAULT", "RAPE", "HOMICIDE + SHOOTING", "ROBBERY (ALL)")) %>%
-  ggplot(aes(crimedate)) +
-  geom_line(aes(y=roll_90, color = description)) +
-  facet_wrap(ncol = 1, ~description, scales="free_y") +
-  theme_iteam_presentations() +
-  theme(legend.position = "none",
-        axis.title.x = element_blank()) +
-  scale_color_discrete_iteam() +
-  labs(title = "Actual 90-Day Crime Trends") +
-  labs(y = "90 Day Rolling Total")
-```
-
-
-
-
-```{r fig.width = 4, fig.height = 4, out.height="100%"}
+```{r fig.width = 2.5, fig.height = 3, out.height="50%"}
 deseasoned_all_citywide %>%
   filter(grepl("ROBBERY", description),
          description != "ROBBERY (ALL)",
          crimedate >= "2019-01-01") %>%
   ggplot(aes(crimedate)) +
+  geom_rect(aes(xmin=md_stay_at_home_start, xmax=md_stay_at_home_end, ymin=0, ymax=Inf),
+            fill = "gray90", alpha = 0.5) +
   geom_line(aes(y=deseasoned_90d, color = description)) +
+  geom_point(data = . %>% 
+               filter(crimedate == max(crimedate) - 365), 
+             aes(x = crimedate, y = deseasoned_90d),
+             color = iteam.colors[1], size = 3) +
+  geom_point(data = . %>% 
+               filter(crimedate == max(crimedate)), 
+             aes(x = crimedate, y = roll_90),
+             color = red_orange, size = 3) +
   facet_wrap(ncol = 1, ~description, scales="free_y") +
   theme_iteam_presentations() +
-  scale_color_discrete_iteam() +
   theme(legend.position = "none",
+        axis.title.x = element_blank(),
+          panel.grid.major.x = element_line(color = "gray90")) +
+  scale_color_discrete_iteam() +
+    scale_x_date(date_breaks = "1 year", date_labels = format("%Y"),
+               date_minor_breaks = "1 month") +
+  #labs(title = "Actual 90-Day Crime Trends") +
+  labs(y = "90 Day Rolling Total")
+```
+
+```{r fig.width = 2.5, fig.height = 3, out.height="50%"}
+deseasoned_all_citywide %>%
+  filter(grepl("ROBBERY", description),
+         description != "ROBBERY (ALL)",
+         crimedate >= "2019-01-01") %>%
+  ggplot(aes(crimedate)) +
+  geom_rect(aes(xmin=md_stay_at_home_start, xmax=md_stay_at_home_end, ymin=0, ymax=Inf),
+            fill = "gray90", alpha = 0.5) +
+  geom_line(aes(y=roll_90, color = description)) +
+  geom_point(data = . %>% 
+               filter(crimedate == max(crimedate) - 365), 
+             aes(x = crimedate, y = roll_90),
+             color = iteam.colors[1], size = 3) +
+  geom_point(data = . %>% 
+               filter(crimedate == max(crimedate)), 
+             aes(x = crimedate, y = roll_90),
+             color = red_orange, size = 3) +
+  facet_wrap(ncol = 1, ~description, scales="free_y") +
+  theme_iteam_presentations() +
+  theme(legend.position = "none",
+        axis.title.x = element_blank(),
+          panel.grid.major.x = element_line(color = "gray90")) +
+  scale_color_discrete_iteam() +
+      scale_x_date(date_breaks = "1 year", date_labels = format("%Y"),
+               date_minor_breaks = "1 month") +
+  #labs(title = "Actual 90-Day Crime Trends") +
+  labs(y = "90 Day Rolling Total")
+```
+
+
+
+
+```{r fig.width = 3.5, fig.height = 2, out.height="100%"}
+deseasoned_all_citywide %>%
+  filter(grepl("ROBBERY", description),
+         description != "ROBBERY (ALL)",
+         crimedate >= "2019-01-01") %>%
+  ggplot(aes(crimedate)) +
+  geom_rect(aes(xmin=md_stay_at_home_start, xmax=md_stay_at_home_end, ymin=0, ymax=Inf),
+            fill = "gray90", alpha = 0.5) +
+  geom_line(aes(y=roll_90, color = description),
+            size = 1.) +
+  #facet_wrap(ncol = 1, ~description) +
+  ylim(c(0, 1200)) +
+  theme_iteam_presentations() +
+  scale_color_discrete_iteam() +
+  theme(legend.title = element_blank(),
+        legend.position = "right",
         axis.title.x = element_blank(),
         panel.grid.major.x = element_line(color = "gray70"),
         panel.grid.minor.x = element_line(color = "gray90")) +
-  labs(title = "Seasonally Adjusted 90-Day Crime Trends") +
+  #labs(title = "Seasonally Adjusted 90-Day Crime Trends") +
   labs(y = "90 Day Rolling Total") +
   scale_x_date(date_breaks = "1 year", date_labels = format("%Y"),
                date_minor_breaks = "1 month")
 ```
 
-```{r fig.width = 6, fig.height = 4, out.height="100%"}
+```{r fig.width = 6, fig.height = 6, out.height="100%", out.width = "100%"}
+# THIS ONE SHOULD BE THE FUNCTION
 deseasoned_all_by_district %>%
-  filter(grepl("ROBBERY", description),
-         description != "ROBBERY (ALL)",
-         crimedate >= "2019-01-01",
-         district %in% c("CENTRAL", "NORTHEAST", "SOUTHEAST")) %>%
+  filter(description == "HOMICIDE + SHOOTING",
+         crimedate >= "2019-01-01") %>%
   ggplot(aes(crimedate)) +
-  geom_line(aes(y=deseasoned_90d, color = description)) +
-  facet_wrap(nrow = 4, ~description + district, scales="free_y") +
+    geom_rect(aes(xmin=md_stay_at_home_start, xmax=md_stay_at_home_end, ymin=0, ymax=Inf),
+              fill = "gray90", alpha = 0.5) +
+  geom_line(aes(y=deseasoned_90d),  color = iteam.colors[2]) +
+  geom_point(data = . %>% 
+               filter(crimedate == max(crimedate) - 365), 
+             aes(x = crimedate, y = deseasoned_90d),
+             color = iteam.colors[1], size = 3) +
+  geom_point(data = . %>% 
+               filter(crimedate == max(crimedate)), 
+             aes(x = crimedate, y = deseasoned_90d),
+             color = red_orange, size = 3) +
+  facet_wrap( ~description + district, scales = "free_y") +
   theme_iteam_presentations() +
-  scale_color_discrete_iteam() +
+  #scale_color_discrete_iteam() +
   theme(legend.position = "none",
         axis.title.x = element_blank(),
-        panel.grid.major.x = element_line(color = "gray70"),
-        panel.grid.minor.x = element_line(color = "gray90")) +
+        panel.grid.major.x = element_line(color = "gray90"),
+        panel.grid.minor.x = element_blank()) +
   labs(title = "Seasonally Adjusted 90-Day Crime Trends") +
   labs(y = "90 Day Rolling Total") +
   scale_x_date(date_breaks = "1 year", date_labels = format("%Y"),
-               date_minor_breaks = "1 month")
+               date_minor_breaks = "1 month") 
 ```
+
+
+
+```{r}
+violent_crime %>%
+  filter(description != "ROBBERY (ALL)",
+         grepl("ROBBERY", description),
+         year(crimedate) == 2020) %>%
+  count(description)
+  
+```
+

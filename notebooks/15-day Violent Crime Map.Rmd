@@ -1,0 +1,146 @@
+---
+title: "15-Day Violent Crime Map"
+subtitle: "Mayor's Office of Performance & Innovation"
+author: "justin.elszasz@baltimorecity.gov"
+date: "September 14, 2020"
+output:
+  html_notebook: 
+    code_folding: hide
+    fig_height: 4
+    toc: yes
+    toc_depth: 2
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup, include = T, echo = F, message = FALSE, cache = TRUE}
+knitr::opts_chunk$set(echo = F, 
+                      warning = F, 
+                      message = F, 
+                      include = T,
+                      fig.width = 10,
+                      fig.height = 5)
+```
+
+```{r libraries}
+library(tidyverse)
+library(RSocrata)
+library(ggiteam)
+library(scales)
+library(lubridate)
+library(leaflet)
+library(htmltools)
+library(sf)
+library(kableExtra)
+source("../src/functions.R")
+```
+
+```{r}
+crime <- get_violent_crime_socrata(start_date = "2020-08-15")
+council_districts <- st_read(
+  "../data/raw/Council_District-shp/Council_District.shp", 
+  quiet = T
+  )
+```
+
+```{r}
+crime <- crime %>%
+  filter(
+    !is.na(latitude),
+    crimedate >= max(crimedate) - 15,
+    description_grouped %in% c("HOMICIDE + SHOOTING", "ROBBERY (ALL)")
+  ) %>%
+  st_as_sf(coords = c("longitude", "latitude"))
+```
+
+```{r}
+council_districts <- st_transform(council_districts, 4326)
+```
+
+```{r}
+red_orange <- "#f05a28"
+```
+
+This 15-day violent crime map is for the period **`r format(min(crime$crimedate), "%B %d")` through `r format(max(crime$crimedate), "%B %d")`**. Data obtained from [Open Baltimore](https://data.baltimorecity.gov/resource/wsfq-mvij), which is updated and weekly and includes Part 1 violent crime through `r format(max(crime$crimedate), "%B %d")`.
+
+This report includes the following crime types:
+
+- Homicide
+- Non-fatal shooting
+- Robbery (including street, residence, carjacking, and commercial)
+
+Part 1 crime data on Open Baltimore includes point locations and addresses to the rounded block address to protect privacy. Some points may be located in one district though the actual event occurred in another district due to this rounding.
+
+```{r}
+crime %>% 
+  as.data.frame %>% 
+  count(description) %>%
+  rename(
+    "Crime Type" = description,
+    "Count During 15-Day Period" = n
+  ) %>%
+  kable("html") %>%
+  kable_styling(bootstrap_options = "basic")
+```
+
+Hover over each council district to see its number and council person.
+
+Hover over each crime location to see more information about the event.
+
+```{r}
+crime <- crime %>%
+  mutate(
+    description_semigroup = case_when(
+      description == "HOMICIDE" ~ "Homicide",
+      description == "SHOOTING" ~ "Shooting",
+      description_grouped == "ROBBERY (ALL)" ~ "Robbery",
+      TRUE ~ description_grouped
+    )
+  )
+```
+
+
+```{r}
+vals <- c(red_orange, iteam.colors[3], iteam.colors[1])
+
+pal <- colorFactor(palette = vals,
+                   domain = crime$description_semigroup)
+
+district_labels <- paste0(
+  "<b>District ", council_districts$AREA_NAME, "</b><br>",
+  "Councilperson ", council_districts$CNTCT_NME, "<br>"
+)
+
+crime_labels <- paste0(
+  "<b>", crime$description, "</b><br>",
+  crime$crimedate, " ", crime$crimetime, "<br>",
+  crime$location, "<br>",
+  crime$neighborhood, "<br>",
+  "Police District: ", crime$district
+)
+```
+
+
+```{r fig.height=8, fig.width = 8, out.width="100%"}
+crime_map <- crime %>%
+  leaflet() %>%
+  setView(lng = -76.6, lat = 39.3, zoom = 12) %>%
+  addProviderTiles(providers$Stamen.TonerLite) %>%
+  addPolygons(data = council_districts,
+              fillOpacity = 0,
+              color = "black", 
+              opacity = 1,
+              weight = 3,
+              label = ~lapply(district_labels, HTML)) %>%
+  addCircleMarkers(data = crime, 
+                   radius = 2,
+                   opacity = 1,
+                   color = ~pal(crime$description_semigroup),
+                   label = ~lapply(crime_labels, HTML)) %>%
+  addLegend(pal = pal,
+            values = crime$description_semigroup,
+            opacity = 1)
+  
+crime_map
+```
+

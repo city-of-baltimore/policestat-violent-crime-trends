@@ -2,24 +2,30 @@ md_stay_at_home_start <- as.Date("2020-03-30")
 md_stay_at_home_end <- as.Date("2020-05-15")
 
 
-get_violent_crime_socrata <- function(){
+get_violent_crime_socrata <- function(start_date, end_date = NA){
   
   library(tidyverse)
   library(RSocrata)
-  
+
   # Get data from Open Baltimore
-  query <- paste0("https://data.baltimorecity.gov/resource/wsfq-mvij.json?$where=",
-                  "(Description like 'HOMICIDE' OR ",
-                  "Description like 'SHOOTING' OR ", 
-                  "Description like 'RAPE' OR ", 
-                  "Description like 'AGG. ASSAULT' OR ",
-                  "contains(Description, 'ROBBERY'))")
+  query <- paste0(
+    "https://data.baltimorecity.gov/resource/wsfq-mvij.json?$where=",
+    "(Description like 'HOMICIDE' OR ",
+    "Description like 'SHOOTING' OR ", 
+    "Description like 'RAPE' OR ", 
+    "Description like 'AGG. ASSAULT' OR ",
+    "contains(Description, 'ROBBERY')) AND ",
+    "(crimedate >= '", start_date, "')")
+    
+  if (!is.na(end_date)) {
+    query <- paste0(query, ' AND (crimedate <= "', end_date, '")')
+  }
   
   violent_crime <- read.socrata(query)
   
   # Some cleaning
   violent_crime <- violent_crime %>% 
-    filter(year(crimedate) >= 2014) %>%
+    filter(year(crimedate) >= 2015) %>%
     mutate(
       crimedate = as.Date(crimedate),
       longitude = as.numeric(longitude),
@@ -30,7 +36,11 @@ get_violent_crime_socrata <- function(){
           grepl("ROBBERY", description) ~ "ROBBERY (ALL)",
           description %in% c("HOMICIDE", "SHOOTING") ~ "HOMICIDE + SHOOTING",
           TRUE ~ description)
-    )
+    ) 
+    # ---- this converts to incident instead of victim
+    # group_by(crimedate, crimetime, crimecode, location) %>%
+    # filter(row_number() == 1) %>%
+    # ungroup()
 }
 
 # Calculate rolling totals --------------

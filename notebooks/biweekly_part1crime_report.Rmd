@@ -50,9 +50,7 @@ districts <- readOGR("../data/raw/Districts", "Police_Districts",
                      verbose = T)
 
 
-  
-
-query <- paste0("https://data.baltimorecity.gov/resource/wsfq-mvij.json?$where=",
+  query <- paste0("https://data.baltimorecity.gov/resource/wsfq-mvij.json?$where=",
                 "(Description like 'HOMICIDE' OR ",
                 "Description like 'SHOOTING' OR ", 
                 "Description like 'RAPE' OR ", 
