@@ -1,6 +1,8 @@
 ---
 title: "R Notebook"
 output: html_notebook
+editor_options: 
+  chunk_output_type: inline
 ---
 
 This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
@@ -20,7 +22,7 @@ roll28_district_facet_plot(rolling_counts, "HOMICIDE + SHOOTING") +
 ```
 
 ```{r fig.height = 1.55,fig.width = 2.75}
-roll90_single_district_plot("AGG. ASSAULT"v, "NORTHEAST")
+roll90_single_district_plot("AGG. ASSAULT", "NORTHEAST")
 ```
 ```{r}
 rolling_counts_districts %>%
@@ -55,6 +57,6 @@ cumsums_district %>%
 ```{r}
 cumsums %>%
   filter(description == "RAPE",
-         day_of_year == 185)
+         day_of_year == 270)
 ```
 

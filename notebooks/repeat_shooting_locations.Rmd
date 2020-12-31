@@ -1,0 +1,260 @@
+---
+title: 
+subtitle: ""
+author: <a href=mailto:justin.elszasz@baltimorecity.gov>justin.elszasz@baltimorecity.gov</a>
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_notebook:
+    code_folding: hide
+    fig_height: 4
+    fig_width: 6
+    toc: yes
+    toc_depth: 2
+    toc_float: true
+editor_options: 
+  chunk_output_type: inline
+---
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap');
+</style>
+
+```{css, echo=FALSE}
+* {
+  font-family: 'Roboto', sans-serif;
+}
+
+h1, .h1  {
+    margin-top: 70px;
+}
+```
+
+<img src=`r "https://images.squarespace-cdn.com/content/5b32397bf79392af6b062048/1578532761811-Y6J7YANV433GI2O8YPXV/OPI_Logo.png?content-type=image%2Fpng"` width="200">
+
+```{r setup, include = FALSE, echo = FALSE, message = FALSE, cache = FALSE}
+knitr::opts_chunk$set(
+  echo = F,
+  warning = F,
+  message = F,
+  include = T,
+  cache = F,
+  fig.width = 6, 
+  fig.height = 4,
+  out.width = "100%", 
+  out.height = "100%"
+  )
+
+knitr::clean_cache(
+  clean = FALSE, 
+  path = knitr::opts_chunk$get("cache.path")
+  )
+```
+
+```{r load_packages}
+library(tidyverse)
+library(lubridate)
+library(RSocrata)
+library(sf)
+library(ggiteam)
+library(kableExtra)
+library(htmltools)
+library(leaflet)
+library(geojsonsf)
+library(DT)
+library(readxl)
+library(ggmap)
+```
+
+```{r}
+source("R/functions.R")
+```
+
+
+```{r}
+buffer_size <- 500 * 0.3048 # 500 ft in meters
+red_orange <- "#f05a28"
+
+start_date <- "2020-09-15"
+```
+
+```{r}
+google_api_secret <- Sys.getenv("GOOGLE_API_SECRET")
+register_google(key = google_api_secret)
+```
+
+```{r}
+violent_crime <- get_violent_crime_socrata(start_date = "2019-01-01")
+last_date <- max(crime$`Crime Date`)
+```
+
+
+```{r}
+shootings <- violent_crime %>%
+  filter(!is.na(latitude),
+         description %in% c("HOMICIDE", "SHOOTING")) %>%
+  st_as_sf(coords = c("longitude", "latitude"),
+           crs = 4326) %>%
+  mutate(ID = row_number())
+```
+
+```{r}
+shootings2020 <- shootings %>% 
+  filter(year(crimedate) == 2020, !(location %in% facilities))
+shootings2020_m <- shootings2020 %>% st_transform(2248)
+
+shootings2020_buffers <- st_buffer(shootings2020_m, 500)
+shootings2020_buffers <- st_transform(shootings2020_buffers, 4326)
+```
+
+```{r}
+shootings2020 %>%
+  as.data.frame() %>%
+  count(neighborhood) %>%
+  arrange(desc(n)) %>%
+  write_csv("output/top_shooting_neighborhoods_2020.csv")
+```
+
+```{r}
+
+```
+
+
+
+```{r warning=F, message = F, echo = F}
+start_time <- Sys.time()
+
+#for (i in seq(1, 100, 1)){
+for (i in seq(1, nrow(shootings2020), 1)){
+  the_shooting <- shootings2020 %>% filter(row_number() == i)
+  the_shooting_ID <- the_shooting$ID
+  the_buffer <- shootings2020_buffers %>% filter(ID == the_shooting_ID)
+  the_shooting_date <- the_shooting$crimedate
+  
+  shots_in_buffer <- st_as_sf(shootings) %>%
+    st_join(
+      st_as_sf(the_buffer), 
+      join = st_within, 
+      left = F) %>%
+    mutate(
+      time_between_events = as.numeric(
+        difftime(
+          crimedate.x, 
+          the_shooting_date, 
+          units = "days")
+        )) %>%
+    filter(ID.x != the_shooting_ID)
+  
+  count_shots_within_buffer <- nrow(shots_in_buffer)
+  
+  shots_within_year <- shots_in_buffer %>%
+    filter(time_between_events <= 0,
+           time_between_events >= -365) %>%
+    nrow()
+
+  shots_within_90d <- shots_in_buffer %>%
+    filter(time_between_events <= 0,
+           time_between_events >= -90) %>%
+    nrow()
+  #shootings_during_period[i, "cad_n"] <- count_shots_within_buffer
+  
+
+  shootings2020[i, "shots_within_500ft_year"] <- shots_within_year
+  shootings2020[i, "shots_within_500ft_90d"] <- shots_within_90d
+
+}
+
+end_time <- Sys.time()
+
+end_time - start_time
+```
+
+
+
+```{r}
+cumpct_shootings_with_x_shootings_past_year <- shootings2020 %>%
+  as.data.frame() %>%
+  count(shots_within_500ft_year) %>%
+  mutate(cumsum = cumsum(n),
+         cumpct = cumsum / sum(n))
+
+```
+
+```{r}
+cumpct_shootings_with_x_shootings_past_90d <- shootings2020 %>%
+  as.data.frame() %>%
+  count(shots_within_500ft_90d) %>%
+  mutate(cumsum = cumsum(n),
+         cumpct = cumsum / sum(n))
+
+```
+
+```{r}
+cumpct_shootings_with_x_shootings_past_year %>%
+  ggplot(aes(shots_within_500ft_year, cumpct)) +
+  geom_line() +
+  theme_iteam_presentations() +
+  scale_y_continuous(labels = scales::percent, limits = c(0, 1)) +
+  labs(x = "Number of Shootings/Homicides at Location in Prior Year",
+       y = "Percent of All Shootings/Homicides")
+```
+
+
+```{r}
+cumpct_shootings_with_x_shootings_past_90d %>%
+  ggplot(aes(shots_within_500ft_90d, cumpct)) +
+  geom_line() +
+  theme_iteam_presentations() +
+  scale_y_continuous(labels = scales::percent, limits = c(0, 1)) +
+  labs(x = "Number of Shootings/Homicides at Location in Prior 90 Days",
+       y = "Percent of All Shootings/Homicides")
+```
+
+
+```{r}
+labels <- paste0(
+  shootings2020$crimedate, "<br>",
+  shootings2020$shots_within_500ft_year
+)
+
+shootings2020 %>%
+  #filter(shots_during_period > 0) %>%
+  leaflet() %>%
+  setView(lng = -76.6, lat = 39.3, zoom = 11) %>%
+  addProviderTiles(providers$Stamen.TonerLite) %>%
+  addPolygons(data = shootings2020_buffers,
+              fillOpacity = .1,
+              label = ~lapply(labels, HTML),
+              opacity = .2) %>%
+  addCircles(data = shootings,
+                   radius = 3,
+                   opacity = 1,
+                   
+             label = ~crimedate,
+                   color = "red") 
+  
+  
+```
+
+```{r fig.height = 8, fig.width = 6}
+library(leaflet.extras)
+labels <- paste0(
+  shootings2020$crimedate, "<br>",
+  shootings2020$shots_within_500ft_year
+)
+
+shootings2020 %>%
+  #filter(shots_during_period > 0) %>%
+  leaflet() %>%
+  setView(lng = -76.6, lat = 39.3, zoom = 11) %>%
+  addProviderTiles(providers$Stamen.TonerLite) %>%
+  addHeatmap(max = 1,
+             radius = 10,
+             blur = 30)
+  
+  
+```
+
+```{r}
+sessionInfo()
+```
+

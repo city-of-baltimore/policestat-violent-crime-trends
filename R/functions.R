@@ -1,8 +1,80 @@
 md_stay_at_home_start <- as.Date("2020-03-30")
 md_stay_at_home_end <- as.Date("2020-05-15")
 
+facilities <- c(
+  "300 E MADISON ST", # central booking
+  "1400 E NORTH AVE", # district court
+  "1900 ARGONNE DR", # northeastern
+  "2200 W Cold Spring Ln", # northern
+  "1000 N MOUNT ST", # western
+  "5200 REISTERSTOWN RD	", # northwest
+  "1600 EDISON HWY", # eastern
+  "400 FONTHILL AVE", # southwest
+  "0 CHERRY HILL RD", # southern
+  "600 E FAYETTE ST", # central/hq
+  "5700 EASTERN AVE", # southeast
+  "2000 W BALTIMORE ST",  # bon secours
+  "4000 DEEPWOOD RD", # loch raven va
+  "300 N GAY ST", # juv booking
+  "4900 EASTERN AV", # bayview
+  "1800 ORLEANS ST", # jhh downtown
+  "600 N WOLFE ST", # jhh downtown
+  "0 S GREENE ST", # umd medical center
+  "3400 N CALVERT ST" # union memorial
+)
+
+db <- Sys.getenv("CITISTAT_DB")
+uid <- Sys.getenv("CITY_USERNAME")
+pwd <- Sys.getenv("CITY_PWD")
+balt_sql <- Sys.getenv("BALT_SQL")
+
+get_violent_crime_sql <- function(start_date, end_date = NA){
+  # this function returns a dataframe of part 1 crime from the citistat database on the BCIT SQL server
+  library(odbc)
+  library(DBI)
+  library(dplyr)
+  
+  con <- dbConnect(odbc::odbc(), 
+                   .connection_string = paste0("Driver={Simba SQL Server ODBC Driver}; 
+                                           Server=", balt_sql, "; 
+                                           Database=", db, "; 
+                                           UID=", uid,  "; 
+                                           PWD=", pwd, "; 
+                                           Integrated Security=NTLM"), 
+                   timeout = 10)
+  
+  message(paste0(Sys.time(), ": Getting crime data from SQL server"))
+  
+  q1 <- tbl(con, "Part1_Crime") %>%
+    #count(year(`Call Date`)) 
+    filter(`Crime Date` >= '2020-01-01')
+  
+  #cfs <- as.data.frame(q1)
+  message(paste0(Sys.time(), ": Crime data retrieved from SQL server"))
+  q1 <- as.data.frame(q1)
+  
+  names(q1)<-str_replace_all(names(q1), c(" " = "" ))
+  
+  q1 <- q1 %>%
+    rename_all(funs(tolower)) %>%
+    rename(district = "policedistrict") %>%
+    mutate(
+      crimedate = as.Date(crimedate),
+      longitude = as.numeric(longitude),
+      latitude = as.numeric(latitude),
+      #description = ifelse(grepl("ROBBERY", description), "ROBBERY", description),
+      description_grouped = 
+        case_when(
+          grepl("ROBBERY", description) ~ "ROBBERY (ALL)",
+          description %in% c("HOMICIDE", "SHOOTING") ~ "HOMICIDE + SHOOTING",
+          TRUE ~ description)
+    ) 
+  
+}
+
 
 get_violent_crime_socrata <- function(start_date, end_date = NA){
+  # this function retrievs a data frame of part 1 crime for baltimore from the Open Baltimore portal
   
   library(tidyverse)
   library(RSocrata)
@@ -37,13 +109,19 @@ get_violent_crime_socrata <- function(start_date, end_date = NA){
           description %in% c("HOMICIDE", "SHOOTING") ~ "HOMICIDE + SHOOTING",
           TRUE ~ description)
     ) 
-    # ---- this converts to incident instead of victim
-    # group_by(crimedate, crimetime, crimecode, location) %>%
-    # filter(row_number() == 1) %>%
-    # ungroup()
+
 }
 
-# Calculate rolling totals --------------
+to_incident_based <- function(violent_crime){
+  # this function takes victim-level crime data and returns an incident-level dataframe (one record per incident rather than victim) - open baltimore data is victim-based
+  violent_crime <- violent_crime %>%
+    group_by(crimedate, crimetime, crimecode, location) %>%
+    mutate(Victims = n()) %>%
+    filter(row_number() == 1) %>%
+    ungroup()
+}
+
+# Calxculate rolling totals --------------
 
 get_daily_counts_by_district <- function(violent_crime){
   

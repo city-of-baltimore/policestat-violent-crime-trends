@@ -2,7 +2,7 @@
 title: "15-Day Violent Crime Map"
 subtitle: "Mayor's Office of Performance & Innovation"
 author: "justin.elszasz@baltimorecity.gov"
-date: "September 14, 2020"
+date: "September 15, 2020"
 output:
   html_notebook: 
     code_folding: hide
@@ -32,16 +32,35 @@ library(leaflet)
 library(htmltools)
 library(sf)
 library(kableExtra)
-source("../src/functions.R")
+library(readxl)
+source("../R/functions.R")
 ```
 
 ```{r}
-crime <- get_violent_crime_socrata(start_date = "2020-08-15")
+crime_raw <- get_violent_crime_socrata(start_date = "2020-08-15")
+#crime_raw <- read_excel("../data/raw/open_baltimore_2020-09-15.xls")
 council_districts <- st_read(
   "../data/raw/Council_District-shp/Council_District.shp", 
   quiet = T
   )
 ```
+
+```{r}
+crime <- crime_raw %>%
+  rename_all(funs(tolower)) %>%
+  rename(
+    latitude = lat,
+    longitude = long
+  ) %>%
+  mutate(crimedate = as.Date(crimedate, format="%m/%d/%Y"),
+         description_grouped = 
+           case_when(
+             grepl("ROBBERY", description) ~ "ROBBERY (ALL)",
+             description %in% c("HOMICIDE", "SHOOTING") ~ "HOMICIDE + SHOOTING",
+             TRUE ~ description)
+  ) 
+```
+
 
 ```{r}
 crime <- crime %>%
@@ -51,6 +70,7 @@ crime <- crime %>%
     description_grouped %in% c("HOMICIDE + SHOOTING", "ROBBERY (ALL)")
   ) %>%
   st_as_sf(coords = c("longitude", "latitude"))
+  
 ```
 
 ```{r}
@@ -87,7 +107,7 @@ Hover over each council district to see its number and council person.
 
 Hover over each crime location to see more information about the event.
 
-```{r}
+```{r message = F, echo = F}
 crime <- crime %>%
   mutate(
     description_semigroup = case_when(
@@ -143,4 +163,3 @@ crime_map <- crime %>%
   
 crime_map
 ```
-

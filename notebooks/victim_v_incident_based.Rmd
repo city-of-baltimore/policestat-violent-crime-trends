@@ -1,0 +1,135 @@
+---
+title: Victim v. Incident-Based Violent Crime
+subtitle: ""
+author: <a href=mailto:justin.elszasz@baltimorecity.gov>justin.elszasz@baltimorecity.gov</a>
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_notebook:
+    code_folding: hide
+    fig_height: 4
+    fig_width: 6
+    toc: yes
+    toc_depth: 2
+    toc_float: true
+editor_options: 
+  chunk_output_type: inline
+---
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap');
+</style>
+
+```{css, echo=FALSE}
+* {
+  font-family: 'Roboto', sans-serif;
+}
+
+h1, .h1  {
+    margin-top: 70px;
+}
+```
+
+<img src=`r "https://images.squarespace-cdn.com/content/5b32397bf79392af6b062048/1578532761811-Y6J7YANV433GI2O8YPXV/OPI_Logo.png?content-type=image%2Fpng"` width="200">
+
+```{r setup, include = FALSE, echo = FALSE, message = FALSE, cache = FALSE}
+knitr::opts_chunk$set(
+  echo = F,
+  warning = F,
+  message = F,
+  include = T,
+  cache = F,
+  fig.width = 6, 
+  fig.height = 4,
+  out.width = "100%", 
+  out.height = "100%"
+  )
+
+knitr::clean_cache(
+  clean = FALSE, 
+  path = knitr::opts_chunk$get("cache.path")
+  )
+```
+
+```{r load_packages}
+library(tidyverse)
+library(lubridate)
+library(sf)
+library(leaflet)
+library(ggiteam)
+library(kableExtra)
+library(htmltools)
+library(DT)
+```
+
+```{r}
+source("../R/functions.R")
+red_orange <- "#f05a28"
+```
+
+```{r}
+violent_crime <- get_violent_crime_socrata(start_date = "2015-01-01")
+```
+
+```{r}
+violent_crime_incident <- to_incident_based(violent_crime)
+```
+
+```{r}
+violent_crime_daily <- violent_crime_incident %>%
+  select(crimedate, description, Victims) %>%
+  group_by(crimedate, description) %>%
+  summarise(
+    incidents = n(), 
+    victims = sum(Victims)) %>%
+  group_by(description) %>%
+  complete(crimedate = seq.Date(
+    as.Date(min(violent_crime$crimedate)), 
+    as.Date(max(violent_crime$crimedate)),
+    by="day")) %>%
+  replace_na(list(victims = 0, incidents = 0)) %>%
+  ungroup()
+  
+```
+
+```{r}
+violent_crime_daily <- violent_crime_daily %>%
+  group_by(description) %>%
+  mutate(victims_90d = roll_sum(x = victims, n = 90, align = "right", fill = NA),
+         incidents_90d = roll_sum(x = incidents, n = 90, align = "right", fill = NA),
+         victim_incident_ratio_90d = victims_90d / incidents_90d)
+```
+
+```{r fig.width = 5, fig.height = 4}
+violent_crime_daily %>%
+  filter(grepl("ROBBERY", description)) %>%
+  ggplot(aes(crimedate, victim_incident_ratio_90d)) +
+  geom_line() +
+  facet_wrap(~description) +
+  theme_iteam_presentations() +
+  scale_y_continuous(limits = c(1, 1.5)) +
+  theme(axis.title.x = element_blank()) +
+  labs(y = "90-Day Average Victims per Incident")
+```
+
+
+```{r fig.width = 5, fig.height = 4}
+violent_crime_daily %>%
+  ungroup() %>%
+  mutate(description_grouped = case_when(
+    description %in% c("HOMICIDE", "SHOOTING") ~ "HOMICIDE + SHOOTING",
+    grepl("ROBBERY", description) ~ "ROBBERY (ALL)",
+    TRUE ~ description
+  )) %>%
+  ggplot(aes(crimedate, victim_incident_ratio_90d)) +
+  geom_line() +
+  facet_wrap(~description_grouped) +
+  theme_iteam_presentations() +
+  scale_y_continuous(limits = c(1, 1.5)) +
+  labs(y = "90-Day Average Victims per Incident")
+```
+
+
+```{r echo = F, include = T}
+sessionInfo()
+```
+

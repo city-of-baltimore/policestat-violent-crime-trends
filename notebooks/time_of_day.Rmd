@@ -44,7 +44,7 @@ library(htmltools)
 library(lubridate)
 #library(leaflet.extras)
 #library(mapview)
-library(suncalc) # for sunrise and sunset times
+#library(suncalc) # for sunrise and sunset times
 #source("../src/functions.R")
 ```
 
@@ -54,7 +54,7 @@ query <- paste0("https://data.baltimorecity.gov/resource/wsfq-mvij.json?$where="
                 "Description like 'SHOOTING' OR ", 
                 "Description like 'AGG. ASSAULT' OR ",
                 "contains(Description, 'ROBBERY')) AND ",
-                "date_extract_y(crimedate) in(2017, 2018, 2019)")
+                "date_extract_y(crimedate) in(2020)")
 
 df <- read.socrata(query)
 ```
@@ -103,6 +103,9 @@ df %>%
   mutate(crimetime = hms::as_hms(crimetime),
          crime_hour = hour(crimetime),
          crime_day = wday(crimedate)) %>%
+  group_by(crimedate, crimetime) %>%
+  filter(row_number() == 1) %>%
+  ungroup() %>%
   count(crime_day, crime_hour) %>%
   mutate(pct = n / sum(n)) %>%
   ggplot(aes(crime_hour, crime_day, fill = pct)) +

@@ -1,24 +1,24 @@
-
+#!/usr/local/bin/Rscript
 library(tidyverse)
 library(lubridate)
 library(RcppRoll)
 library(ggiteam)
 
-source("src/functions.R")
+source("R/functions.R")
 
 red_orange <- "#f05a28"
 
-folder <- paste0("../../../../Google Drive/Office of Performance & Innovation/CitiStat/PoliceStat/Rolling 28 and 90 Day Plots/", last_date, "/")
-
-
-violent_crime <- get_violent_crime_socrata()
+violent_crime <- get_violent_crime_socrata(start_date = "2015-01-01")
 rolling_counts_by_district <- get_rolling_counts_by_district(violent_crime)
 rolling_counts_citywide <- get_rolling_counts_citywide(violent_crime)
 
-# rolling_counts_citywide %>%
-#   ggplot(aes(crimedate, roll_90, color = description)) +
-#   geom_line()
 last_date <- max(violent_crime$crimedate)
+
+folder <- paste0(
+  Sys.getenv("HOME"),
+  "/Google Drive/Office of Performance & Innovation/CitiStat/PoliceStat/violent_crime_trends/", 
+  last_date, "/"
+  )
 
 deseasoned_homicides_shootings_historical <- rolling_counts_citywide %>%
   filter(description == "HOMICIDE + SHOOTING", 
@@ -280,31 +280,42 @@ district_facet_actual_and_deseasoned <- function(deseasoned_all_by_district, cri
                 filter(year(crimedate) == 2020) %>%
                 filter(day_of_year == max(day_of_year),
                        type == "Actual"),
-              aes(x = crimedate - 21, y = 1.2 * `90d total`, label = `90d total`),
+              aes(x = crimedate - 21, y = 1.25 * `90d total`, label = `90d total`),
               size = 5) +
     facet_grid(rows = vars(district_short), cols = vars(type)) +
     scale_x_date(date_labels = "%b\n%y") +
+    labs(y = "90 Day Total") +
+    #scale_y_continuous(breaks = 4) +
+    theme_iteam_presentations() +
     theme(legend.position = "none",
           axis.title.x = element_blank(),
-          panel.grid.major.x = element_line(color = "gray90")) +
-    theme_iteam_presentations() 
+          strip.text.y = element_text(face = "bold", size = 16),
+          #panel.grid.major.x = element_line(color = "gray90")) +
+          panel.grid.major.y = element_blank()) +
+    
+    geom_hline(yintercept = 0, color = "black", size = .25)
 }
 
 
 plt <- district_facet_actual_and_deseasoned(deseasoned_all_by_district, "ROBBERY (ALL)")
 fn <- paste0(folder, last_date, "ROBBERY_ALL_rolling_90d_by_district_actual_and_deseasoned", ".png")
 ggsave(filename = fn, plt, device = "png", 
-       width = 5, height = 8, units = "in")
+       width = 6, height = 9, units = "in")
 
 
 plt <- district_facet_actual_and_deseasoned(deseasoned_all_by_district, "AGG. ASSAULT")
 fn <- paste0(folder, last_date, "AGG_ASSAULT_rolling_90_day_by_district_actual_and_deseasoned", ".png")
 ggsave(filename = fn, plt, device = "png", 
-       width = 5, height = 8, units = "in")
+       width = 6, height = 9, units = "in")
 
 
 plt <- district_facet_actual_and_deseasoned(deseasoned_all_by_district, "HOMICIDE + SHOOTING")
 fn <- paste0(folder, last_date, "HOMICIDE+SHOOTING_rolling_90_day_by_district_actual_and_deseasoned", ".png")
 ggsave(filename = fn, plt, device = "png", 
-       width = 5, height = 8, units = "in")
+       width = 6, height = 9, units = "in")
 
+plt <- district_facet_actual_and_deseasoned(deseasoned_all_by_district, "ROBBERY - CARJACKING")
+fn <- paste0(folder, last_date, "ROBBERY - CARJACKING_rolling_90_day_by_district_actual_and_deseasoned", ".png")
+ggsave(filename = fn, plt, device = "png", 
+       width = 6, height = 9, units = "in")
+ 
