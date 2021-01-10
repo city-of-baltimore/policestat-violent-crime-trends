@@ -1,33 +1,3 @@
-#!/usr/local/bin/Rscript
-library(tidyverse)
-library(RSocrata)
-library(RcppRoll)
-library(ggiteam)
-library(scales)
-library(lubridate)
-library(sf)
-library(rgdal)
-library(leaflet)
-library(RODBC)
-library(htmltools)
-library(readxl)
-
-source(paste0(here::here(), "/R/functions.R"))
-
-data_source <- "open baltimore" # options: "sql, open_baltimore"
-red_orange <- "#f05a28"
-
-url <- "https://data.baltimorecity.gov/resource/9gmf-s2ba.geojson"
-districts <- read_sf(url)
-
-if (data_source == "open baltimore"){
-  message(paste0(Sys.time(), ": ", "Fetching data from Open Baltimore")) 
-  violent_crime <- get_violent_crime_socrata(start_date = "2015-01-01")
-} else {
-  message(paste0(Sys.time(), ": ", "Fetching data from SQL table")) 
-  violent_crime <- get_violent_crime_sql(start_date = "2015-01-01")
-}
-
 
 # Last date in dataset
 last_date <- max(violent_crime$crimedate)
@@ -407,12 +377,12 @@ message(paste0(Sys.time(), ": ", "All plots saved"))
 # table 
 max_day_of_year <- cumsums %>%
   filter(crime_year == 2020) %>%
-  summarise(max(day_of_year)) %>%
+  summarise(ifelse(max(day_of_year)==366, 365, max(day_of_year))) %>%
   pull()
 
 cumsums %>%
-  filter(crime_year %in% c(2019, 2020),
-         day_of_year == max_day_of_year ) %>%
+  filter(crime_year %in% c(2020, 2019),
+         day_of_year == max_day_of_year) %>%
   select(-crimedate, -n, -day_of_year) %>%
   spread(key = crime_year, value = crime_cumsum) %>%
   mutate(pct_change = scales::percent(round((`2020` - `2019`)/`2019`, 2), accuracy = 2)) %>%
