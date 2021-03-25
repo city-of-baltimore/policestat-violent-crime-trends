@@ -330,12 +330,12 @@ cum_goal_hom_shot_plot <- cumsums %>%
     aes(x = last_day, y = last_cumsum, label = `last_cumsum`),
     color = this_year_color
     ) +
-  geom_smooth(method = lm, se = FALSE, aes(day_of_year, crime_cumsum), fullrange=TRUE, size = .4) +
   geom_line(aes(day_of_year, crime_cumsum, 
                 group = crime_year, 
                 color = as.factor(crime_year),
                 size = as.factor(crime_year))) +
   geom_line(data = data.frame(x = c(0, 365), y = c(0, 901)), aes(x = x, y = y)) +
+  geom_smooth(method = lm, se = FALSE, aes(day_of_year, crime_cumsum), fullrange=TRUE, size = .4) +
   geom_point(aes(x = 365, y = 901)) +
   theme_iteam_presentations() +
   scale_color_manual(values = c(red_orange)) +
@@ -378,12 +378,12 @@ cum_goal_hom_shot_plot <- cumsums %>%
     aes(x = last_day, y = last_cumsum, label = `last_cumsum`),
     color = this_year_color
     ) +
-  geom_smooth(method = lm, se = FALSE, aes(day_of_year, crime_cumsum), fullrange=TRUE, size = .4) +
   geom_line(aes(day_of_year, crime_cumsum, 
                 group = crime_year, 
                 color = as.factor(crime_year),
                 size = as.factor(crime_year))) +
   geom_line(data = data.frame(x = c(0, 365), y = c(0, 2995)), aes(x = x, y = y)) +
+  geom_smooth(method = lm, se = FALSE, aes(day_of_year, crime_cumsum), fullrange=TRUE, size = .4) +
   geom_point(aes(x = 365, y = 2995)) +
   theme_iteam_presentations() +
   scale_color_manual(values = c(red_orange)) +
@@ -426,12 +426,12 @@ cum_goal_hom_shot_plot <- cumsums %>%
     aes(x = last_day, y = last_cumsum, label = `last_cumsum`),
     color = this_year_color
     ) +
-  geom_smooth(method = lm, se = FALSE, aes(day_of_year, crime_cumsum), fullrange=TRUE, size = .4) +
   geom_line(aes(day_of_year, crime_cumsum, 
                 group = crime_year, 
                 color = as.factor(crime_year),
                 size = as.factor(crime_year))) +
   geom_line(data = data.frame(x = c(0, 365), y = c(0, 285)), aes(x = x, y = y)) +
+  geom_smooth(method = lm, se = FALSE, aes(day_of_year, crime_cumsum), fullrange=TRUE, size = .4) +
   geom_point(aes(x = 365, y = 285)) +
   theme_iteam_presentations() +
   scale_color_manual(values = c(red_orange)) +
