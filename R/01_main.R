@@ -18,9 +18,10 @@ library(DBI)
 data_source <- "sql" # options: "sql", "csv,", "open baltimore"
 red_orange <- "#f05a28"
 data_folder <- paste0(
-  Sys.getenv("HOME"),
-  "/Google Drive/Office of Performance & Innovation/",
-  "CitiStat/PoliceStat/data/raw/"
+  #Sys.getenv("HOME")
+  "C:\\Users\\april.welch\\Google Drive\\CrimeTrends\\"
+  #/Office of Performance & Innovation/",
+  #"CitiStat/PoliceStat/data/raw/"
   ) 
 
 crime_csv_path <- "crime/2021-01-05_pt1_crime_drew_vaught_export.csv"
@@ -36,7 +37,7 @@ facilities <- c(
   "1900 ARGONNE DR", # northeastern
   "2200 W Cold Spring Ln", # northern
   "1000 N MOUNT ST", # western
-  "5200 REISTERSTOWN RD	", # northwest
+  "5200 REISTERSTOWN RD ", # northwest
   "1600 EDISON HWY", # eastern
   "400 FONTHILL AVE", # southwest
   "0 CHERRY HILL RD", # southern
@@ -57,11 +58,13 @@ source(paste0(here::here(), "/R/98_plot_functions.R"))
 source(paste0(here::here(), "/R/02_load_data.R"))
 
 output_folder <- paste0(
-  Sys.getenv("HOME"),
-  "/Google Drive/Office of Performance & Innovation/",
-  "CitiStat/PoliceStat/violent_crime_trends/", 
-  last_date, "/"
+  "C:\\Users\\april.welch\\Google Drive\\CrimeTrends\\",
+  #"/Google Drive/starred/Office of Performance & Innovation/"
+  #"CitiStat/"
+  #PoliceStat/violent_crime_trends/test/", 
+  last_date, "\\"
 )
+
 
 if (!dir.exists(output_folder)){
   dir.create(output_folder)
