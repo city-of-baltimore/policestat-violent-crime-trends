@@ -15,15 +15,22 @@ get_violent_crime_sql <- function(start_date, end_date = NA){
   #                                Integrated Security=NTLM"),
   #   timeout = 10)
   
-  con <- odbc::dbConnect(
-    odbc::odbc(),
-    Driver = "FreeTDS Driver",
-    Server = Sys.getenv("BALT_SQL"),
-    Database = Sys.getenv("CITISTAT_DB"),
-    uid = Sys.getenv("CITY_USERNAME"),
-    pwd = Sys.getenv("CITY_PWD"),
-    Port = 1433
-  )
+#  con <- odbc::dbConnect(
+ #   odbc::odbc(),
+ #   Driver = "SQL Server",
+#    Server = Sys.getenv("BALT_SQL"),
+#    Database = Sys.getenv("CITISTAT_DB"),
+#    uid = Sys.getenv("CITY_USERNAME"),
+#    pwd = Sys.getenv("CITY_PWD"),
+#    Port = 1433
+#  )
+   con <-dbConnect(odbc::odbc(),
+                  Driver = "SQL Server",
+                  Server = "BALT-SQL-FC",
+                  Database = "CitiStat",
+                  Trusted_Connection = "True",
+                  host = "localhost",
+                  port = 1433)
   
   message(paste0(Sys.time(), ": Getting crime data from SQL server"))
   
