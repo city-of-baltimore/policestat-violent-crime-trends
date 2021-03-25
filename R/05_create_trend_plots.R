@@ -1,5 +1,4 @@
 message(paste0(Sys.time(), ": ", "Starting script 05_create_trend_plots.R")) 
-
 # City-wide 90-day rolling plots 
 create_plot_subdirectory("citywide_90d")
 create_plot_subdirectory("citywide_28d")
@@ -271,12 +270,16 @@ this_year_color <- red_orange
 
 # plot faceted by crime type
 cum_plot <- cumsums %>%
-  filter(crime_year >= 2017,
+  filter(crime_year >= 2014,
          description %in% c("ROBBERY (ALL)", "AGG. ASSAULT", "RAPE", "HOMICIDE", "SHOOTING")) %>%
   ggplot() +
-    geom_point(
+    geom_line(aes(day_of_year, crime_cumsum, 
+                group = crime_year, 
+                color = as.factor(crime_year),
+                size = as.factor(crime_year))) +
+        geom_point(
       data = cumsums %>%
-        filter(crime_year == 2020,
+        filter(crime_year == 2021,
                description %in% c("ROBBERY (ALL)", "AGG. ASSAULT", "RAPE", "HOMICIDE", "SHOOTING")) %>%
         group_by(description) %>%
         summarise(last_day = max(day_of_year), 
@@ -284,12 +287,14 @@ cum_plot <- cumsums %>%
       aes(x = last_day, y = last_cumsum),
       color = this_year_color
     ) +
-    geom_line(aes(day_of_year, crime_cumsum, 
-                group = crime_year, 
-                color = as.factor(crime_year),
-                size = as.factor(crime_year))) +
+    scale_color_manual(values = c(iteam.colors[3], iteam.colors[2], iteam.colors[4], iteam.colors[5], iteam.colors[6], "gray20", iteam.colors[1], this_year_color)) +
   facet_wrap(~description, nrow = 1, scales = "free_y") +
   theme_iteam_presentations() +
+  #scale_color_manual(values = c(iteam.colors[3], "gray80", "gray80", "gray80", "gray50", "gray20", iteam.colors[1], this_year_color)) +
+    #Edit March 11 c(iteam.colors[3], "gray80", "gray80", "gray80", "gray50", "gray20", iteam.colors[1], this_year_color)) +
+  #+
+  scale_color_manual(values = c(iteam.colors[3], iteam.colors[2], iteam.colors[4], iteam.colors[5], iteam.colors[6], "gray20", iteam.colors[1], this_year_color)) +
+  scale_size_manual(values = c(.75, .5, .5, .5, .5, .5, .75, 1)) +
   #scale_color_manual(values = c("gray80", "gray50", "gray20", this_year_color)) +
   scale_color_viridis_d() +
   #scale_size_manual(values = c(.5, .5, .5, 1.3)) +
@@ -305,42 +310,43 @@ ggsave(
   filename = paste0(output_folder, last_date, "_cumulative_facet.png"), 
   plot = cum_plot,
   device = "png", 
-  width = 14,
-  height = 3, 
+  width = 7,
+  height = 2, 
   units = "in"
 )
 
 # homicides and shootings against goal
 cum_goal_hom_shot_plot <- cumsums %>%
-  filter(crime_year == 2020,
+  filter(crime_year == 2021,
          description == "HOMICIDE + SHOOTING") %>%
   ggplot() +
   geom_point(
     data = cumsums %>%
-      filter(crime_year == 2020,
+      filter(crime_year == 2021,
              description == "HOMICIDE + SHOOTING") %>%
       group_by(description) %>%
       summarise(last_day = max(day_of_year), 
                 last_cumsum = max(crime_cumsum)),
-    aes(x = last_day, y = last_cumsum),
+    aes(x = last_day, y = last_cumsum, label = `last_cumsum`),
     color = this_year_color
     ) +
+  geom_smooth(method = lm, se = FALSE, aes(day_of_year, crime_cumsum), fullrange=TRUE, size = .4) +
   geom_line(aes(day_of_year, crime_cumsum, 
                 group = crime_year, 
                 color = as.factor(crime_year),
                 size = as.factor(crime_year))) +
-  geom_line(data = data.frame(x = c(0, 365), y = c(0, 1000)), aes(x = x, y = y)) +
-  geom_point(aes(x = 365, y = 1000)) +
+  geom_line(data = data.frame(x = c(0, 365), y = c(0, 901)), aes(x = x, y = y)) +
+  geom_point(aes(x = 365, y = 901)) +
   theme_iteam_presentations() +
   scale_color_manual(values = c(red_orange)) +
-  scale_size_manual(values = c(1.3)) +
+  scale_size_manual(values = c(1.1)) +
   theme(
     legend.title = element_blank(),
     legend.position = "none"
   ) +
   scale_x_continuous(
     breaks = c(0, 180, 365),
-    limits = c(0, 450)
+    limits = c(0, 400)
   ) +
   labs(
     #title = "Cumulative Homicides + Shootings",
@@ -352,9 +358,106 @@ ggsave(
   filename = paste0(output_folder, last_date, "_hom_shot+goal.png"), 
   plot = cum_goal_hom_shot_plot, 
   device = "png", 
-  width = 6, 
-  height = 6, 
+  width = 2, 
+  height = 2, 
   units = "in"
 )
+
+# NEW Robbery Section
+cum_goal_hom_shot_plot <- cumsums %>%
+  filter(crime_year == 2021,
+         description == "ROBBERY (ALL)") %>%
+  ggplot() +
+  geom_point(
+    data = cumsums %>%
+      filter(crime_year == 2021,
+             description == "ROBBERY (ALL)") %>%
+      group_by(description) %>%
+      summarise(last_day = max(day_of_year), 
+                last_cumsum = max(crime_cumsum)),
+    aes(x = last_day, y = last_cumsum, label = `last_cumsum`),
+    color = this_year_color
+    ) +
+  geom_smooth(method = lm, se = FALSE, aes(day_of_year, crime_cumsum), fullrange=TRUE, size = .4) +
+  geom_line(aes(day_of_year, crime_cumsum, 
+                group = crime_year, 
+                color = as.factor(crime_year),
+                size = as.factor(crime_year))) +
+  geom_line(data = data.frame(x = c(0, 365), y = c(0, 2995)), aes(x = x, y = y)) +
+  geom_point(aes(x = 365, y = 2995)) +
+  theme_iteam_presentations() +
+  scale_color_manual(values = c(red_orange)) +
+  scale_size_manual(values = c(1.1)) +
+  theme(
+    legend.title = element_blank(),
+    legend.position = "none"
+  ) +
+  scale_x_continuous(
+    breaks = c(0, 180, 365),
+    limits = c(0, 400)
+  ) +
+  labs(
+    #title = "Cumulative Homicides + Shootings",
+    y = "Robberies (ALL)",
+    x = "Day of Year"
+  ) 
+
+ggsave(
+  filename = paste0(output_folder, last_date, "_robberies+goal.png"), 
+  plot = cum_goal_hom_shot_plot, 
+  device = "png", 
+  width = 2, 
+  height = 2, 
+  units = "in"
+)
+
+# NEW homicides against goal
+cum_goal_hom_shot_plot <- cumsums %>%
+  filter(crime_year == 2021,
+         description == "HOMICIDE") %>%
+  ggplot() +
+  geom_point(
+    data = cumsums %>%
+      filter(crime_year == 2021,
+             description == "HOMICIDE") %>%
+      group_by(description) %>%
+      summarise(last_day = max(day_of_year), 
+                last_cumsum = max(crime_cumsum)),
+    aes(x = last_day, y = last_cumsum, label = `last_cumsum`),
+    color = this_year_color
+    ) +
+  geom_smooth(method = lm, se = FALSE, aes(day_of_year, crime_cumsum), fullrange=TRUE, size = .4) +
+  geom_line(aes(day_of_year, crime_cumsum, 
+                group = crime_year, 
+                color = as.factor(crime_year),
+                size = as.factor(crime_year))) +
+  geom_line(data = data.frame(x = c(0, 365), y = c(0, 285)), aes(x = x, y = y)) +
+  geom_point(aes(x = 365, y = 285)) +
+  theme_iteam_presentations() +
+  scale_color_manual(values = c(red_orange)) +
+  scale_size_manual(values = c(1.1)) +
+  theme(
+    legend.title = element_blank(),
+    legend.position = "none"
+  ) +
+  scale_x_continuous(
+    breaks = c(0, 180, 365),
+    limits = c(0, 400)
+  ) +
+  labs(
+    #title = "Cumulative Homicides + Shootings",
+    y = "Homicides",
+    x = "Day of Year"
+  ) 
+
+ggsave(
+  filename = paste0(output_folder, last_date, "_homicides+goal.png"), 
+  plot = cum_goal_hom_shot_plot, 
+  device = "png", 
+  width = 2, 
+  height = 2, 
+  units = "in"
+)
+
 
 message(paste0(Sys.time(), ": ", "05_create_trend_plots.R complete"))  
