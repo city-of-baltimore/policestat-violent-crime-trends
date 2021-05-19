@@ -392,7 +392,7 @@ ggsave(filename = fn, district_hom_deseasoned, device = "png",
 # NEW Homicide and shooting actual 
 district_hom_deseasoned <- rolling_counts_by_district %>%
   filter(description == "HOMICIDE + SHOOTING",
-         crimedate >= "2019-01-01") %>%
+         crimedate >= "2014-01-01") %>%
   ggplot(aes(crimedate)) +
   geom_rect(aes(xmin=md_stay_at_home_start, xmax=md_stay_at_home_end, ymin=0, ymax=Inf),
             fill = "gray90", alpha = 0.5) +
@@ -420,4 +420,4 @@ district_hom_deseasoned <- rolling_counts_by_district %>%
 fn <- paste0(output_folder, last_date, "_rolling_90_day_by_district_hom+shot_actual", ".png")
 
 ggsave(filename = fn, district_hom_deseasoned, device = "png", 
-       width = 6, height = 6, units = "in")
+       width = 12, height = 6, units = "in")

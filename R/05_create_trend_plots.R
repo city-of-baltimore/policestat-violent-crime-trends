@@ -267,7 +267,6 @@ ggsave(
 
 # Cumulative faceted --------
 this_year_color <- red_orange
-
 # plot faceted by crime type
 cum_plot <- cumsums %>%
   filter(crime_year >= 2014,
@@ -277,7 +276,8 @@ cum_plot <- cumsums %>%
                 group = crime_year, 
                 color = as.factor(crime_year),
                 size = as.factor(crime_year))) +
-        geom_point(
+      #scale_color_manual(values=c(iteam.colors[3], iteam.colors[3], iteam.colors[3], iteam.colors[3], iteam.colors[3], "gray20", iteam.colors[3], this_year_color)) +
+      geom_point(
       data = cumsums %>%
         filter(crime_year == 2021,
                description %in% c("ROBBERY (ALL)", "AGG. ASSAULT", "RAPE", "HOMICIDE", "SHOOTING")) %>%
@@ -287,17 +287,12 @@ cum_plot <- cumsums %>%
       aes(x = last_day, y = last_cumsum),
       color = this_year_color
     ) +
-    scale_color_manual(values = c(iteam.colors[3], iteam.colors[2], iteam.colors[4], iteam.colors[5], iteam.colors[6], "gray20", iteam.colors[1], this_year_color)) +
+    #scale_color_manual(values = c(iteam.colors[3], iteam.colors[3], iteam.colors[3], iteam.colors[3], iteam.colors[3], "gray20", iteam.colors[3], this_year_color)) +
   facet_wrap(~description, nrow = 1, scales = "free_y") +
   theme_iteam_presentations() +
-  #scale_color_manual(values = c(iteam.colors[3], "gray80", "gray80", "gray80", "gray50", "gray20", iteam.colors[1], this_year_color)) +
-    #Edit March 11 c(iteam.colors[3], "gray80", "gray80", "gray80", "gray50", "gray20", iteam.colors[1], this_year_color)) +
-  #+
-  scale_color_manual(values = c(iteam.colors[3], iteam.colors[2], iteam.colors[4], iteam.colors[5], iteam.colors[6], "gray20", iteam.colors[1], this_year_color)) +
+  scale_color_manual(values = c(iteam.colors[1], iteam.colors[6], iteam.colors[3], iteam.colors[5], iteam.colors[2], iteam.colors[4], "purple", this_year_color)) +
   scale_size_manual(values = c(.75, .5, .5, .5, .5, .5, .75, 1)) +
-  #scale_color_manual(values = c("gray80", "gray50", "gray20", this_year_color)) +
-  scale_color_viridis_d() +
-  #scale_size_manual(values = c(.5, .5, .5, 1.3)) +
+  #scale_color_viridis_d() +
   theme(legend.title = element_blank()) +
   scale_x_continuous(
     breaks = c(0, 180, 365),

@@ -52,10 +52,11 @@ facilities <- c(
   "0 S GREENE ST", # umd medical center
   "3400 N CALVERT ST" # union memorial
 )
+setwd('C:\\Users\\april.welch\\Documents\\AprilGitHub\\repo\\policestat-violent-crime-trends')
 
-source(paste0(here::here(), "/R/99_helper_functions.R"))
-source(paste0(here::here(), "/R/98_plot_functions.R"))
-source(paste0(here::here(), "/R/02_load_data.R"))
+source("C:/Users/april.welch/Documents/AprilGitHub/repo/policestat-violent-crime-trends/R/99_helper_functions.R")
+source("C:/Users/april.welch/Documents/AprilGitHub/repo/policestat-violent-crime-trends/R/98_plot_functions.R")
+source("C:/Users/april.welch/Documents/AprilGitHub/repo/policestat-violent-crime-trends/R/02_load_data.R")
 
 output_folder <- paste0(
   "C:\\Users\\april.welch\\Google Drive\\CrimeTrends\\",
@@ -70,8 +71,8 @@ if (!dir.exists(output_folder)){
   dir.create(output_folder)
 }
 
-source(paste0(here::here(), "/R/03_data_wrangling.R"))
-source(paste0(here::here(), "/R/04_create_tables.R"))
-source(paste0(here::here(), "/R/05_create_trend_plots.R"))
-source(paste0(here::here(), "/R/06_create_deseasoned_plots.R"))
+source("C:/Users/april.welch/Documents/AprilGitHub/repo/policestat-violent-crime-trends/R/03_data_wrangling.R")
+source("C:/Users/april.welch/Documents/AprilGitHub/repo/policestat-violent-crime-trends/R/04_create_tables.R")
+source("C:/Users/april.welch/Documents/AprilGitHub/repo/policestat-violent-crime-trends/R/05_create_trend_plots.R")
+source("C:/Users/april.welch/Documents/AprilGitHub/repo/policestat-violent-crime-trends/R/06_create_deseasoned_plots.R")
 
