@@ -54,7 +54,6 @@ facilities <- c(
   "0 S GREENE ST", # umd medical center
   "3400 N CALVERT ST" # union memorial
 )
-setwd('C:\\Users\\april.welch\\OneDrive - City Of Baltimore\\Documents\\AprilGitHub\\repo\\policestat-violent-crime-trends')
 
 source("R/99_helper_functions.R")
 source("R/98_plot_functions.R")
