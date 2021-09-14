@@ -269,7 +269,7 @@ ggsave(
 this_year_color <- red_orange
 # plot faceted by crime type
 cum_plot <- cumsums %>%
-  filter(crime_year >= 2014,
+  filter(crime_year >= 2015,
          description %in% c("ROBBERY (ALL)", "AGG. ASSAULT", "RAPE", "HOMICIDE", "SHOOTING")) %>%
   ggplot() +
     geom_line(aes(day_of_year, crime_cumsum, 

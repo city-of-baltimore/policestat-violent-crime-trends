@@ -277,3 +277,58 @@ deseason_rolling_90d_counts <- function(rolling_counts){
   deseasoned_w_this_year
 }
 
+#DV Counts
+DVget_rolling_counts_by_district <- function(violent_crime){
+  
+  DVcounts_districts <- violent_crime %>%
+    filter(domesticviolence == "Y") %>%
+    count(description_grouped, description, district, crimedate) %>%
+    group_by(description_grouped, description, district) %>%
+    complete(crimedate = seq.Date(
+      as.Date(min(violent_crime$crimedate)), 
+      as.Date(max(violent_crime$crimedate)),
+      by="day")) %>%
+    replace_na(list(n = 0)) %>%
+    ungroup()
+  
+  DVhom_shot_combo_district_counts <- DVcounts_districts %>% 
+    filter(description_grouped == "HOMICIDE + SHOOTING") %>% 
+    group_by(district, crimedate) %>% 
+    select(description, district, crimedate, n) %>% 
+    spread(key = description, value = n) %>% 
+    mutate(n = HOMICIDE + SHOOTING, 
+           description = "HOMICIDE + SHOOTING") %>% 
+    select(-HOMICIDE, -SHOOTING) %>% 
+    ungroup()
+  
+  DVrobbery_combo_district_counts <- DVcounts_districts %>% 
+    filter(description_grouped == "ROBBERY (ALL)") %>% 
+    group_by(district, crimedate) %>% 
+    select(description, district, crimedate, n) %>% 
+    spread(key = description, value = n) %>%
+    mutate(
+      n = `ROBBERY - RESIDENCE` + `ROBBERY - COMMERCIAL` + `ROBBERY - CARJACKING` + `ROBBERY - STREET`, 
+      description = "ROBBERY (ALL)") %>%
+    select(
+      -`ROBBERY - RESIDENCE`,
+      -`ROBBERY - COMMERCIAL`,
+      -`ROBBERY - CARJACKING`,
+      -`ROBBERY - STREET`
+    ) %>% 
+    ungroup()
+  
+  DVrolling_counts_districts <- DVcounts_districts %>%
+    bind_rows(DVhom_shot_combo_district_counts) %>%
+    bind_rows(DVrobbery_combo_district_counts)
+  
+  DVrolling_counts_districts <- DVrolling_counts_districts %>%
+    arrange(crimedate) %>%
+    group_by(district, description) %>%
+    mutate(roll_28 = roll_sum(x = n, n = 28, align = "right", fill = NA),
+           roll_7 = roll_sum(x = n, n = 7, align = "right", fill = NA),
+           roll_90 = roll_sum(x = n, n = 90, align = "right", fill = NA)) %>%
+    ungroup() %>%
+    arrange(description, district, crimedate)
+  
+  DVrolling_counts_districts
+}

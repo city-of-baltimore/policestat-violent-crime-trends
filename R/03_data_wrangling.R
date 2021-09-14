@@ -2,6 +2,7 @@ message(paste0(Sys.time(), ": ", "Starting script 03_data_wrangling.R"))
 
 rolling_counts_by_district <- get_rolling_counts_by_district(violent_crime)
 rolling_counts_citywide <- get_rolling_counts_citywide(violent_crime)
+DVrolling_counts_by_district <- DVget_rolling_counts_by_district(violent_crime)
 
 # calc cumsums
 cumsums <- violent_crime %>%
@@ -18,6 +19,23 @@ cumsums <- violent_crime %>%
   group_by(description, crime_year) %>%
   mutate(crime_cumsum = cumsum(n)) %>%
   ungroup() 
+
+#Disposition
+# <- violent_crime %>%
+  #filter(description %in% c("HOMICIDE")) %>%
+ # count(description, crimedate) %>%
+  #group_by(description) %>%
+  #complete(crimedate = seq.Date(start_date, 
+   #                             last_date,
+    #                            by="day")) %>%
+#  replace_na(list(n = 0)) %>%
+ # arrange(description, crimedate, dispositiondate, dispositionname) %>%
+  #mutate(day_of_year = as.numeric(strftime(crimedate, "%j")),
+    #     crime_year = year(crimedate),
+     #    disp_year = year(dispositiondate)) %>%
+  #group_by(description, crime_year, dispositiondate, dispositionname) %>%
+#  mutate(crime_cumsum = cumsum(n)) %>%
+ # ungroup() 
 
 group_cumsums <- violent_crime %>%
   filter(description_grouped %in% c("ROBBERY (ALL)", "HOMICIDE + SHOOTING")) %>%
