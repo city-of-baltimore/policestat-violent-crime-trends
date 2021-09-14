@@ -1,0 +1,126 @@
+---
+title: "PoliceStat Biweekly Reporting"
+author: "Justin Elszasz"
+email: "justin.elszasz@baltimorecity.gov"
+date: "Tuesday, July 9, 2019"
+output:
+  html_notebook:
+    #code_folding: hide
+    fig_height: 5
+    fig_width: 10
+    toc: yes
+    toc_depth: 2
+---
+
+```{r setup, include = FALSE, echo = FALSE, message = FALSE, cache = TRUE}
+knitr::opts_chunk$set(echo = FALSE, warning = F, message = F, include = T,
+                                 fig.width = 10, fig.height = 5)
+```
+
+
+```{r}
+library(tidyverse)
+library(RSocrata)
+library(RcppRoll)
+library(ggiteam)
+library(staplr)
+library(scales)
+library(lubridate)
+library(rgdal)
+
+#library(tidyverse)
+#library(RSocrata)
+#library(sp)
+library(leaflet)
+library(RODBC)
+library(htmltools)
+#library(rgdal)
+#library(geojsonsf)
+library(lubridate)
+#library(leaflet.extras)
+library(mapview)
+```
+
+```{r load_data}
+microzones <- readOGR("../data/Micro_Zones", "Zones")
+street.guncounts <- readOGR("../data/Streets_GunCounts", "Streets_GunCounts")
+vri <- readOGR("../data/VRI_Zones_2019", "VRI_Zones_Jan2019")
+posts <- readOGR("../data/Police_Post_Shapefile", "Posts_As_of_1_22_2019")
+districts <- readOGR("../data/Districts", "Police_Districts")
+
+query <- "https://data.baltimorecity.gov/resource/wsfq-mvij.json?$where=Description contains('SHOOTING', 'HOMICIDE', 'ROBBERY', 'AGG. ASSAULT') AND date_extract_y(crimedate) in(2018, 2019)"
+
+df <- read.socrata(query)
+```
+
+```{r}
+microzones <- spTransform(microzones, CRS("+init=epsg:4326"))
+vri <- spTransform(vri, CRS("+init=epsg:4326"))
+posts <- spTransform(posts, CRS("+init=epsg:4326"))
+```
+
+
+```{r}
+df <- df %>% 
+  filter(!is.na(latitude)) %>%
+  mutate(longitude = as.numeric(longitude),
+         latitude = as.numeric(latitude))
+
+# convert crime df to geospatial
+df_geo <- SpatialPointsDataFrame(
+  coords = df %>% select(longitude, latitude), 
+  df, 
+  proj4string = CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
+)
+
+# transform to right coords system
+df_geo <- spTransform(
+  df_geo, 
+  CRSobj = CRS("+init=epsg:4326 +proj=longlat +datum=WGS84 +no_defs +ellps=WGS84
++towgs84=0,0,0")
+)
+
+# tag each crime with the post
+df_tagged_post <- over(df_geo, posts) 
+df_tagged_microzones <- over(df_geo, microzones) 
+
+# join the tag info back to the crime geospatial df
+df_geo@data <- bind_cols(df_geo@data, df_tagged_post) %>%
+  rename("post_correct" = Area) %>%
+  bind_cols(df_tagged_microzones)
+
+
+```
+
+```{r}
+df_geo@data %>% count(post == post_correct)
+```
+
+
+```{r}
+# get counts of shootings by post since 2018
+post_shootings_2018_to_present <- df_geo@data %>% 
+  filter(year(crimedate) >= 2018, 
+         description == "SHOOTING") %>% 
+  count(post_correct) %>%
+  rename("shootings_since_2018" = n)
+
+# join the counts to the post shapefile
+posts@data <- posts@data %>% 
+  left_join(
+    post_shootings_2018_to_present,
+    by = c("Area" = "post_correct")
+  )
+
+microzone_shootings_2018_to_present <- df_geo@data %>%
+  filter(year(crimedate) >= 2018,
+         description == "SHOOTING") %>%
+  count(HS_Zone) %>%
+  rename("shootings_since_2018" = n)
+
+microzones@data <- microzones@data %>%
+  left_join(
+    microzone_shootings_2018_to_present,
+    by = c("HS_Zone" = "HS_Zone")
+  )
+```

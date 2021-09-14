@@ -20,7 +20,7 @@ data_source <- "sql" # options: "sql", "csv,", "open baltimore"
 red_orange <- "#f05a28"
 data_folder <- paste0(
   #Sys.getenv("HOME")
-  "C:\\Users\\april.welch\\Google Drive\\CrimeTrends\\"
+  "data//"
   #/Office of Performance & Innovation/",
   #"CitiStat/PoliceStat/data/raw/"
   ) 
@@ -55,9 +55,9 @@ facilities <- c(
   "3400 N CALVERT ST" # union memorial
 )
 
-source("R/99_helper_functions.R")
-source("R/98_plot_functions.R")
-source("R/02_load_data.R")
+source("99_helper_functions.R")
+source("98_plot_functions.R")
+source("02_load_data.R")
 
 output_folder <- paste0(
   "output/",
@@ -69,8 +69,8 @@ if (!dir.exists(output_folder)){
   dir.create(output_folder)
 }
 
-source("R/03_data_wrangling.R")
-source("R/04_create_tables.R")
-source("R/05_create_trend_plots.R")
-source("R/06_create_deseasoned_plots.R")
+source("03_data_wrangling.R")
+source("04_create_tables.R")
+source("05_create_trend_plots.R")
+source("06_create_deseasoned_plots.R")
 
