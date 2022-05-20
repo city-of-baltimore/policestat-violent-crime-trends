@@ -13,7 +13,7 @@ roll28_district_facet_plot <- function(violent_crime, desc){
     summarise(max.y = max(roll_28, na.rm = T)) %>%
     pull()
   
-  first_date <- min(violent_crime$crimedate)
+  first_date <- '2021-01-01'
   last_date <- max(violent_crime$crimedate)
   
   current_state <- violent_crime %>% 
@@ -30,8 +30,6 @@ roll28_district_facet_plot <- function(violent_crime, desc){
     geom_rect(aes(xmin=md_stay_at_home_start, xmax=md_stay_at_home_end, ymin=0, ymax=Inf),
               fill = "gray90", alpha = 0.5) +
     geom_line(size = 0.75) +
-    geom_vline(aes(xintercept = as.Date("2019-07-01")), 
-               color = "red", linetype = "dotted", size = .5) +
     
     #ylim(c(0, max())) +
     geom_point(data = subset(plt_violent_crime, crimedate == last_date), 
@@ -62,11 +60,12 @@ roll28_district_facet_plot <- function(violent_crime, desc){
 roll90_district_facet_plot <- function(violent_crime, desc){
   
   max.y <- violent_crime %>%
-    filter(description == desc) %>%
+    filter(description == desc,
+           crimedate >= '2021-01-01') %>%
     summarise(max.y = max(roll_90, na.rm = T)) %>%
     pull()
   
-  first_date <- min(violent_crime$crimedate)
+  first_date <- '2021-01-01'
   last_date <- max(violent_crime$crimedate)
   
   plt_violent_crime <- violent_crime %>%
@@ -80,9 +79,7 @@ roll90_district_facet_plot <- function(violent_crime, desc){
     geom_rect(aes(xmin=md_stay_at_home_start, xmax=md_stay_at_home_end, ymin=0, ymax=Inf),
               fill = "gray90", alpha = 0.5) +
     geom_line(size = 0.75) +
-    geom_vline(aes(xintercept = as.Date("2019-07-01")), 
-               color = "red", linetype = "dotted", size = .5) +
-    
+
     geom_point(data = subset(plt_violent_crime, crimedate == last_date), 
                aes(x = crimedate, y = roll_90),
                color = "red", size =2) +
@@ -104,7 +101,7 @@ roll90_district_facet_plot <- function(violent_crime, desc){
           #axis.text.x = element_text(angle = 90),
           panel.grid.major.x = element_line(size=.5, color="gray90" )) +
     
-    ylim(0, 1.1 * max.y)
+    ylim(0, 1.5 * max.y)
   
   plt
 }
@@ -116,7 +113,7 @@ roll90_district_facet_plot_sparkline <- function(violent_crime, desc){
     summarise(max.y = max(roll_90, na.rm = T)) %>%
     pull()
   
-  first_date <- min(violent_crime$crimedate)
+  first_date <- '2021-01-01'
   last_date <- max(violent_crime$crimedate)
   
   plt_violent_crime <- violent_crime %>%
@@ -129,8 +126,7 @@ roll90_district_facet_plot_sparkline <- function(violent_crime, desc){
     geom_rect(aes(xmin=md_stay_at_home_start, xmax=md_stay_at_home_end, ymin=0, ymax=Inf),
               fill = "gray90", alpha = 0.5) +
     geom_line(size = 0.75) +
-    geom_vline(aes(xintercept = as.Date("2019-07-01")), 
-               color = "red", linetype = "Dotted", size = .5) +
+
     geom_point(data = subset(plt_violent_crime, crimedate == last_date), 
                aes(x = crimedate, y = roll_90),
                color = "red", size =3) +
@@ -161,7 +157,7 @@ roll90_single_district_plot <- function(desc, dist){
     summarise(max.y = max(roll_90, na.rm = T)) %>%
     pull()
   
-  first_date <- min(violent_crime$crimedate)
+  first_date <- '2021-01-01'
   last_date <- max(violent_crime$crimedate)
   
   plt <- violent_crime %>%
@@ -170,8 +166,7 @@ roll90_single_district_plot <- function(desc, dist){
     geom_rect(aes(xmin=md_stay_at_home_start, xmax=md_stay_at_home_end, ymin=0, ymax=Inf),
               fill = "gray90", alpha = 0.5) +
     geom_line(size = 0.75) +
-    geom_vline(aes(xintercept = as.Date("2019-07-01")), 
-               color = "red", linetype = "dotted", size = .5) +
+
     geom_point(data = subset(violent_crime, crimedate == last_date), 
                aes(x = crimedate, y = roll_90),
                color = "red", size =2) +
@@ -208,7 +203,7 @@ roll28_single_district_plot <- function(desc, dist){
     summarise(max.y = max(roll_28, na.rm = T)) %>%
     pull()
   
-  first_date <- min(violent_crime$crimedate)
+  first_date <- '2021-01-01'
   last_date <- max(violent_crime$crimedate)
   
   plt <- violent_crime %>%
@@ -217,8 +212,7 @@ roll28_single_district_plot <- function(desc, dist){
     geom_rect(aes(xmin=md_stay_at_home_start, xmax=md_stay_at_home_end, ymin=0, ymax=Inf),
               fill = "gray90", alpha = 0.5) +
     geom_line(size = 0.75) +
-    geom_vline(aes(xintercept = as.Date("2019-07-01")), 
-               color = "red", linetype = "dotted", size = .5) +
+
     geom_point(data = subset(violent_crime, crimedate == last_date), 
                aes(x = crimedate, y = roll_28),
                color = "red", size =2) +

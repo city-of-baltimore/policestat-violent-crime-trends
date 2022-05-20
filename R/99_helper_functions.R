@@ -332,3 +332,59 @@ DVget_rolling_counts_by_district <- function(violent_crime){
   
   DVrolling_counts_districts
 }
+
+get_rolling_dvcounts_citywide <- function(violent_crime){
+  
+  counts <- violent_crime %>%
+    filter(domesticviolence == 'Y') %>% 
+    count(description, crimedate) %>%
+    group_by(description) %>%
+    complete(crimedate = seq.Date(as.Date(min(violent_crime$crimedate)), 
+                                  as.Date(max(violent_crime$crimedate)),
+                                  by="day")) %>%
+    replace_na(list(n = 0)) %>%
+    mutate(district = "CITYWIDE")
+  
+  hom_shot_combo_counts <- counts %>% 
+    filter(description %in% c("SHOOTING", "HOMICIDE")) %>% 
+    group_by(crimedate) %>% 
+    select(description, crimedate, n) %>% 
+    spread(key = description, value = n) %>% 
+    mutate(n = HOMICIDE + SHOOTING, 
+           description = "HOMICIDE + SHOOTING",
+           district = "CITYWIDE") %>% 
+    select(-HOMICIDE, -SHOOTING) %>% 
+    ungroup()
+  
+  robbery_combo_counts <- counts %>% 
+    filter(grepl("ROBBERY", description)) %>%
+    group_by(crimedate) %>% 
+    select(description, crimedate, n) %>% 
+    spread(key = description, value = n) %>%
+    mutate(
+      n = `ROBBERY - RESIDENCE` + `ROBBERY - COMMERCIAL` + `ROBBERY - CARJACKING` + `ROBBERY - STREET`, 
+      description = "ROBBERY (ALL)",
+      district = "CITYWIDE") %>%
+    select(
+      -`ROBBERY - RESIDENCE`,
+      -`ROBBERY - COMMERCIAL`,
+      -`ROBBERY - CARJACKING`,
+      -`ROBBERY - STREET`
+    ) %>% 
+    ungroup()
+  
+  rolling_counts <- counts %>%
+    bind_rows(hom_shot_combo_counts) %>%
+    bind_rows(robbery_combo_counts)
+  
+  rolling_counts <- rolling_counts %>%
+    arrange(crimedate) %>%
+    group_by(description) %>%
+    mutate(roll_28 = roll_sum(x = n, n = 28, align = "right", fill = NA),
+           roll_7 = roll_sum(x = n, n = 7, align = "right", fill = NA),
+           roll_90 = roll_sum(x = n, n = 90, align = "right", fill = NA)) %>%
+    ungroup() %>%
+    arrange(description, crimedate)
+  
+  rolling_counts
+}

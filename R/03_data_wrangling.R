@@ -2,6 +2,7 @@ message(paste0(Sys.time(), ": ", "Starting script 03_data_wrangling.R"))
 
 rolling_counts_by_district <- get_rolling_counts_by_district(violent_crime)
 rolling_counts_citywide <- get_rolling_counts_citywide(violent_crime)
+rolling_dvcounts_citywide <- get_rolling_dvcounts_citywide(violent_crime)
 DVrolling_counts_by_district <- DVget_rolling_counts_by_district(violent_crime)
 
 # calc cumsums
@@ -70,7 +71,7 @@ hom_cumsums <- violent_crime %>%
   ungroup()
 
 hom_current <- hom_cumsums %>%
-  filter(crime.year == 2020) %>%
+  filter(crime.year == 2021) %>%
   summarise(max(hom_cumsum)) %>%
   pull()
 

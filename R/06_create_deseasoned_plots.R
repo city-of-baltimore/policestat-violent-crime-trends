@@ -59,7 +59,7 @@ ggsave(filename = fn, actual_major_types_plot, device = "png",
 
 the_deseasoned_book <- deseasoned_all_by_district %>%
   filter(#description == "HOMICIDE + SHOOTING",
-    crimedate >= "2019-01-01") %>%
+    crimedate >= "2020-01-01") %>%
   ggplot(aes(crimedate)) +
   geom_rect(aes(xmin=md_stay_at_home_start, xmax=md_stay_at_home_end, ymin=0, ymax=Inf),
             fill = "gray90", alpha = 0.5) +
@@ -92,7 +92,7 @@ ggsave(filename = fn, the_deseasoned_book, device = "png",
 
 district_hom_deseasoned <- deseasoned_all_by_district %>%
   filter(description == "HOMICIDE + SHOOTING",
-         crimedate >= "2019-01-01") %>%
+         crimedate >= "2020-01-01") %>%
   ggplot(aes(crimedate)) +
   geom_rect(aes(xmin=md_stay_at_home_start, xmax=md_stay_at_home_end, ymin=0, ymax=Inf),
             fill = "gray90", alpha = 0.5) +
@@ -126,7 +126,7 @@ ggsave(filename = fn, district_hom_deseasoned, device = "png",
 district_aggassault_deseasoned <- deseasoned_all_by_district %>%
   filter(description == "AGG. ASSAULT",
          district != "UNKNOWN",
-         crimedate >= "2019-01-01") %>%
+         crimedate >= "2020-01-01") %>%
   ggplot(aes(crimedate)) +
   geom_rect(aes(xmin=md_stay_at_home_start, xmax=md_stay_at_home_end, ymin=0, ymax=Inf),
             fill = "gray90", alpha = 0.5) +
@@ -162,7 +162,7 @@ ggsave(
 district_robbery_deseasoned <- deseasoned_all_by_district %>%
   filter(description == "ROBBERY (ALL)",
          district != "UNKNOWN",
-         crimedate >= "2019-01-01") %>%
+         crimedate >= "2020-01-01") %>%
   ggplot(aes(crimedate)) +
   geom_rect(aes(xmin=md_stay_at_home_start, xmax=md_stay_at_home_end, ymin=0, ymax=Inf),
             fill = "gray90", alpha = 0.5) +
@@ -198,7 +198,7 @@ district_facet_actual_and_deseasoned <- function(deseasoned_all_by_district, cri
   
   district_actual_and_deseasoned <- deseasoned_all_by_district %>%
     filter(description == crime_of_interest,
-           crimedate >= "2020-01-01") %>%
+           crimedate >= "2021-01-01") %>%
     # mutate(district_short = case_when(
     #   district == "SOUTHEAST" ~ "SE",
     #   district == "NORTHEAST" ~ "NE",
@@ -232,7 +232,7 @@ district_facet_actual_and_deseasoned <- function(deseasoned_all_by_district, cri
     ggplot(aes(crimedate, `90d total`)) +
     geom_line(size=.4) +
     geom_text(data = district_actual_and_deseasoned %>%
-                filter(year(crimedate) == 2021) %>%
+                filter(year(crimedate) == 2022) %>%
                 filter(day_of_year == max(day_of_year),
                        type == "Actual"),
               aes(x = crimedate - 21, y = 1.25 * `90d total`, label = `90d total`),
@@ -344,7 +344,7 @@ ggsave(
 # NEW robbery actual 
 district_rob_deseasoned <- rolling_counts_by_district %>%
   filter(description == "ROBBERY (ALL)",
-         crimedate >= "2019-01-01") %>%
+         crimedate >= "2020-01-01") %>%
   ggplot(aes(crimedate)) +
   geom_rect(aes(xmin=md_stay_at_home_start, xmax=md_stay_at_home_end, ymin=0, ymax=Inf),
             fill = "gray90", alpha = 0.5) +
@@ -377,7 +377,7 @@ ggsave(filename = fn, district_rob_deseasoned, device = "png",
 # NEW Agg actual 
 district_agg_deseasoned <- rolling_counts_by_district %>%
   filter(description == "AGG. ASSAULT",
-         crimedate >= "2019-01-01") %>%
+         crimedate >= "2020-01-01") %>%
   ggplot(aes(crimedate)) +
   geom_rect(aes(xmin=md_stay_at_home_start, xmax=md_stay_at_home_end, ymin=0, ymax=Inf),
             fill = "gray90", alpha = 0.5) +
@@ -410,7 +410,7 @@ ggsave(filename = fn, district_agg_deseasoned, device = "png",
 # NEW Homicide and shooting actual 
 district_hom_deseasoned <- rolling_counts_by_district %>%
   filter(description == "HOMICIDE + SHOOTING",
-         crimedate >= "2019-01-01") %>%
+         crimedate >= "2020-01-01") %>%
   ggplot(aes(crimedate)) +
   geom_rect(aes(xmin=md_stay_at_home_start, xmax=md_stay_at_home_end, ymin=0, ymax=Inf),
             fill = "gray90", alpha = 0.5) +
@@ -443,7 +443,7 @@ ggsave(filename = fn, district_hom_deseasoned, device = "png",
 #NEW DV Charts
 DVdistrict_hom_deseasoned <- DVrolling_counts_by_district %>%
   filter(description =="HOMICIDE + SHOOTING",
-         crimedate >= "2019-01-01") %>%
+         crimedate >= "2020-01-01") %>%
   ggplot(aes(crimedate)) +
   geom_rect(aes(xmin=md_stay_at_home_start, xmax=md_stay_at_home_end, ymin=0, ymax=Inf),
             fill = "gray90", alpha = 0.5) +
@@ -475,7 +475,7 @@ ggsave(filename = fn, DVdistrict_hom_deseasoned, device = "png",
 
 DVdistrict_rob_deseasoned <- DVrolling_counts_by_district %>%
   filter(description == "ROBBERY (ALL)",
-         crimedate >= "2019-01-01") %>%
+         crimedate >= "2020-01-01") %>%
   ggplot(aes(crimedate)) +
   geom_rect(aes(xmin=md_stay_at_home_start, xmax=md_stay_at_home_end, ymin=0, ymax=Inf),
             fill = "gray90", alpha = 0.5) +
@@ -508,7 +508,7 @@ ggsave(filename = fn, DVdistrict_rob_deseasoned, device = "png",
 
 DVdistrict_agg_deseasoned <- DVrolling_counts_by_district %>%
   filter(description == "AGG. ASSAULT",
-         crimedate >= "2019-01-01") %>%
+         crimedate >= "2020-01-01") %>%
   ggplot(aes(crimedate)) +
   geom_rect(aes(xmin=md_stay_at_home_start, xmax=md_stay_at_home_end, ymin=0, ymax=Inf),
             fill = "gray90", alpha = 0.5) +
@@ -536,5 +536,37 @@ DVdistrict_agg_deseasoned <- DVrolling_counts_by_district %>%
 fn <- paste0(output_folder, last_date, "domestic_violence_rolling_90_day_by_district_aggassault_actual", ".png")
 
 ggsave(filename = fn, DVdistrict_agg_deseasoned, device = "png", 
+       width = 6, height = 6, units = "in")
+
+DVdistrict_rape_deseasoned <- DVrolling_counts_by_district %>%
+  filter(description == "RAPE",
+         crimedate >= "2020-01-01") %>%
+  ggplot(aes(crimedate)) +
+  geom_rect(aes(xmin=md_stay_at_home_start, xmax=md_stay_at_home_end, ymin=0, ymax=Inf),
+            fill = "gray90", alpha = 0.5) +
+  geom_line(aes(y=roll_90),  color = iteam.colors[2]) +
+  geom_point(data = . %>% 
+               filter(crimedate == max(crimedate) - 365), 
+             aes(x = crimedate, y = roll_90),
+             color = iteam.colors[1], size = 3) +
+  geom_point(data = . %>% 
+               filter(crimedate == max(crimedate)), 
+             aes(x = crimedate, y = roll_90),
+             color = red_orange, size = 3) +
+  facet_wrap( ~description + district) +
+  theme_iteam_presentations() +
+  #scale_color_discrete_iteam() +
+  theme(legend.position = "none",
+        axis.title.x = element_blank(),
+        panel.grid.major.x = element_line(color = "gray90"),
+        panel.grid.minor.x = element_blank()) +
+  labs(title = "Actual Adjusted 90-Day Crime Trends") +
+  labs(y = "90 Day Rolling Total") +
+  scale_x_date(date_breaks = "1 year", date_labels = format("%Y"),
+               date_minor_breaks = "1 month") 
+
+fn <- paste0(output_folder, last_date, "domestic_violence_rolling_90_day_by_district_rape_actual", ".png")
+
+ggsave(filename = fn, DVdistrict_rape_deseasoned, device = "png", 
        width = 6, height = 6, units = "in")
 

@@ -279,7 +279,7 @@ cum_plot <- cumsums %>%
       #scale_color_manual(values=c(iteam.colors[3], iteam.colors[3], iteam.colors[3], iteam.colors[3], iteam.colors[3], "gray20", iteam.colors[3], this_year_color)) +
       geom_point(
       data = cumsums %>%
-        filter(crime_year == 2021,
+        filter(crime_year == 2022,
                description %in% c("ROBBERY (ALL)", "AGG. ASSAULT", "RAPE", "HOMICIDE", "SHOOTING")) %>%
         group_by(description) %>%
         summarise(last_day = max(day_of_year), 
@@ -296,7 +296,7 @@ cum_plot <- cumsums %>%
   theme(legend.title = element_blank()) +
   scale_x_continuous(
     breaks = c(0, 180, 365),
-    limits = c(0, 450)
+    limits = c(0, 366)
   ) +
   ylab("Cumulative Events") +
   xlab("Day of Year") 
@@ -312,12 +312,12 @@ ggsave(
 
 # homicides and shootings against goal
 cum_goal_hom_shot_plot <- cumsums %>%
-  filter(crime_year == 2021,
+  filter(crime_year == 2022,
          description == "HOMICIDE + SHOOTING") %>%
   ggplot() +
   geom_point(
     data = cumsums %>%
-      filter(crime_year == 2021,
+      filter(crime_year == 2022,
              description == "HOMICIDE + SHOOTING") %>%
       group_by(description) %>%
       summarise(last_day = max(day_of_year), 
@@ -329,9 +329,9 @@ cum_goal_hom_shot_plot <- cumsums %>%
                 group = crime_year, 
                 color = as.factor(crime_year),
                 size = as.factor(crime_year))) +
-  geom_line(data = data.frame(x = c(0, 365), y = c(0, 901)), aes(x = x, y = y)) +
+  geom_line(data = data.frame(x = c(0, 365), y = c(0, 907)), aes(x = x, y = y)) +
   geom_smooth(method = lm, se = FALSE, aes(day_of_year, crime_cumsum), fullrange=TRUE, size = .4) +
-  geom_point(aes(x = 365, y = 901)) +
+  geom_point(aes(x = 365, y = 907)) +
   theme_iteam_presentations() +
   scale_color_manual(values = c(red_orange)) +
   scale_size_manual(values = c(1.1)) +
@@ -341,7 +341,7 @@ cum_goal_hom_shot_plot <- cumsums %>%
   ) +
   scale_x_continuous(
     breaks = c(0, 180, 365),
-    limits = c(0, 400)
+    limits = c(0, 366)
   ) +
   labs(
     #title = "Cumulative Homicides + Shootings",
@@ -360,12 +360,12 @@ ggsave(
 
 # NEW Robbery Section
 cum_goal_hom_shot_plot <- cumsums %>%
-  filter(crime_year == 2021,
+  filter(crime_year == 2022,
          description == "ROBBERY (ALL)") %>%
   ggplot() +
   geom_point(
     data = cumsums %>%
-      filter(crime_year == 2021,
+      filter(crime_year == 2022,
              description == "ROBBERY (ALL)") %>%
       group_by(description) %>%
       summarise(last_day = max(day_of_year), 
@@ -377,9 +377,9 @@ cum_goal_hom_shot_plot <- cumsums %>%
                 group = crime_year, 
                 color = as.factor(crime_year),
                 size = as.factor(crime_year))) +
-  geom_line(data = data.frame(x = c(0, 365), y = c(0, 2995)), aes(x = x, y = y)) +
+  geom_line(data = data.frame(x = c(0, 365), y = c(0, 3224)), aes(x = x, y = y)) +
   geom_smooth(method = lm, se = FALSE, aes(day_of_year, crime_cumsum), fullrange=TRUE, size = .4) +
-  geom_point(aes(x = 365, y = 2995)) +
+  geom_point(aes(x = 365, y = 3224)) +
   theme_iteam_presentations() +
   scale_color_manual(values = c(red_orange)) +
   scale_size_manual(values = c(1.1)) +
@@ -389,7 +389,7 @@ cum_goal_hom_shot_plot <- cumsums %>%
   ) +
   scale_x_continuous(
     breaks = c(0, 180, 365),
-    limits = c(0, 400)
+    limits = c(0, 366)
   ) +
   labs(
     #title = "Cumulative Homicides + Shootings",
@@ -408,12 +408,12 @@ ggsave(
 
 # NEW homicides against goal
 cum_goal_hom_shot_plot <- cumsums %>%
-  filter(crime_year == 2021,
+  filter(crime_year == 2022,
          description == "HOMICIDE") %>%
   ggplot() +
   geom_point(
     data = cumsums %>%
-      filter(crime_year == 2021,
+      filter(crime_year == 2022,
              description == "HOMICIDE") %>%
       group_by(description) %>%
       summarise(last_day = max(day_of_year), 
@@ -425,9 +425,9 @@ cum_goal_hom_shot_plot <- cumsums %>%
                 group = crime_year, 
                 color = as.factor(crime_year),
                 size = as.factor(crime_year))) +
-  geom_line(data = data.frame(x = c(0, 365), y = c(0, 285)), aes(x = x, y = y)) +
+  geom_line(data = data.frame(x = c(0, 365), y = c(0, 287)), aes(x = x, y = y)) +
   geom_smooth(method = lm, se = FALSE, aes(day_of_year, crime_cumsum), fullrange=TRUE, size = .4) +
-  geom_point(aes(x = 365, y = 285)) +
+  geom_point(aes(x = 365, y = 287)) +
   theme_iteam_presentations() +
   scale_color_manual(values = c(red_orange)) +
   scale_size_manual(values = c(1.1)) +
@@ -437,7 +437,7 @@ cum_goal_hom_shot_plot <- cumsums %>%
   ) +
   scale_x_continuous(
     breaks = c(0, 180, 365),
-    limits = c(0, 400)
+    limits = c(0, 366)
   ) +
   labs(
     #title = "Cumulative Homicides + Shootings",

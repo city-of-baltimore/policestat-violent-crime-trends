@@ -2,7 +2,7 @@ message(paste0(Sys.time(), ": ", "Starting script 02_load_data.R"))
 
 # load shapefile for districts
 url <- "https://opendata.baltimorecity.gov/egis/rest/services/Hosted/Police_Districts/FeatureServer/0/query?where=1%3D1&outFields=*&outSR=4326&f=json"
-districts <- read_sf(url)
+#districts <- read_sf(url)
 
 if (data_source == "open baltimore"){
   # NEEDS UPDATE 
