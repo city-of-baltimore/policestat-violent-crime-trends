@@ -21,7 +21,7 @@ red_orange <- "#f05a28"
 data_folder <- paste0(
   #Sys.getenv("HOME")
   "data//"
-  #/Office of Performance & Innovation/",
+  #/Office of Performance & Innovation/", 
   #"CitiStat/PoliceStat/data/raw/"
   ) 
 setwd(dirname(rstudioapi::getSourceEditorContext()$path))

@@ -149,21 +149,22 @@ cum.plot <- hom_cumsums %>%
                  y = hom_cumsums %>% 
                    filter(crime.year == 2019) %>%
                    summarise(max(hom_cumsum)) %>%
-                   pull()),
-             color = iteam.colors[3]) +
+                   pull(),
+                color = iteam.colors[3])) +
   geom_point(aes(x = 365, 
                  y = hom_cumsums %>% 
                    filter(crime.year == 2018) %>%
                    summarise(max(hom_cumsum)) %>%
-                   pull()),
-             color = iteam.colors[2]) +
+                   pull(),
+             color = iteam.colors[2])) +
   geom_point(aes(x = 365, 
                  y = hom_cumsums %>% 
                    filter(crime.year == 2017) %>%
                    summarise(max(hom_cumsum)) %>%
-                   pull()),
-             color = iteam.colors[1]) +
-  geom_point(aes(x = 365, y = hom_projections), color = iteam.colors[3]) +
+                   pull(),
+             color = iteam.colors[1])) +
+  geom_point(aes(x = 365, y = hom_projections),
+              color = iteam.colors[3]) +
   geom_text(aes(x = hom_cumsums %>% 
                   filter(crime.year == 2019) %>%
                   summarise(max(day_of_year)) %>%
@@ -206,7 +207,7 @@ cum.plot <- hom_cumsums %>%
             color = iteam.colors[3]) +
   #scale_alpha_manual(values = as.factor(c(1, 1, 0.3, 1., 1))) +
   theme_iteam_presentations() +
-  #scale_color_discrete_iteam() +
+  scale_color_discrete_iteam() +
   scale_color_viridis_d() +
   theme(legend.title = element_blank()) +
   scale_x_continuous(breaks = c(0, 100, 200, 300, 365),
@@ -276,7 +277,7 @@ cum_plot <- cumsums %>%
                 group = crime_year, 
                 color = as.factor(crime_year),
                 size = as.factor(crime_year))) +
-      #scale_color_manual(values=c(iteam.colors[3], iteam.colors[3], iteam.colors[3], iteam.colors[3], iteam.colors[3], "gray20", iteam.colors[3], this_year_color)) +
+      scale_color_manual(values=c(iteam.colors[3], iteam.colors[3], iteam.colors[3], iteam.colors[3], iteam.colors[3], "gray20", iteam.colors[3], this_year_color)) +
       geom_point(
       data = cumsums %>%
         filter(crime_year == 2022,
@@ -287,7 +288,7 @@ cum_plot <- cumsums %>%
       aes(x = last_day, y = last_cumsum),
       color = this_year_color
     ) +
-    #scale_color_manual(values = c(iteam.colors[3], iteam.colors[3], iteam.colors[3], iteam.colors[3], iteam.colors[3], "gray20", iteam.colors[3], this_year_color)) +
+    scale_color_manual(values = c(iteam.colors[3], iteam.colors[3], iteam.colors[3], iteam.colors[3], iteam.colors[3], "gray20", iteam.colors[3], this_year_color)) +
   facet_wrap(~description, nrow = 1, scales = "free_y") +
   theme_iteam_presentations() +
   scale_color_manual(values = c(iteam.colors[1], iteam.colors[6], iteam.colors[3], iteam.colors[5], iteam.colors[2], iteam.colors[4], "purple", this_year_color)) +

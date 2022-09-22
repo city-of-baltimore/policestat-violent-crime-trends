@@ -52,7 +52,7 @@ roll28_district_facet_plot <- function(violent_crime, desc){
           #axis.text.x = element_text(angle = 90),
           panel.grid.major.x = element_line(size = .5, color="gray90" )) +
     
-    ylim(0, 1.1 * max.y)
+    ylim(0, 1.5 * max.y)
   
   plt
 }
@@ -142,7 +142,7 @@ roll90_district_facet_plot_sparkline <- function(violent_crime, desc){
                  position = "top") +
     theme(axis.title.x = element_blank()) +
     
-    ylim(0, 1.1 * max.y)
+    ylim(0, 1.5 * max.y)
   
   plt
 }
@@ -180,6 +180,7 @@ roll90_single_district_plot <- function(desc, dist){
     labs(title = paste0(desc, "\nRolling 90-day Total\n", first_date, " to ", last_date),
          y = "Rolling 90-Day Total") +
     #caption = paste0('Data from "CitiStat.Part1_Crime" table on BCIT SQL server accessed: ', today())) +
+    
     theme_iteam_google_docs() +
     scale_x_date(date_breaks = "1 year", 
                  date_labels = "%Y",
@@ -187,7 +188,7 @@ roll90_single_district_plot <- function(desc, dist){
     theme(axis.title.x = element_blank(),
           #axis.text.x = element_text(p),
           panel.grid.major.x = element_line(size=.2, color="gray90" )) +
-    ylim(0, 1.1 * max.y)
+    ylim(0, 1.5 * max.y)
   
   plt
 }
@@ -233,7 +234,7 @@ roll28_single_district_plot <- function(desc, dist){
     theme(axis.title.x = element_blank(),
           #axis.text.x = element_text(p),
           panel.grid.major.x = element_line(size=.2, color="gray90" )) +
-    ylim(0, 1.1 * max.y)
+    ylim(0, 1.5 * max.y)
   
   plt
 }
